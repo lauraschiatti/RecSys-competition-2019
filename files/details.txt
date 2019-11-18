@@ -1,0 +1,68 @@
+
+# ------------------------------------------------------------------ #
+       ##### Recommender System 2019 Challenge Polimi #####
+# ------------------------------------------------------------------ #
+
+
+# App domain: Online store. The dataset contains 4 months of transactions collected from an online supermarket.
+# ----------
+
+# Interactions: Implicit ratings
+
+# Train-test split : leave-one-out
+# ---------------
+- Sampling one random interaction from each user profile (remove one random interaction)
+- Therefore there is only one positive interaction for each user in the test set
+
+# Goal: build a top-10 recommender
+# --------------------------------
+- recommend a list of 10 potentially relevant items for each user (discover which item a user will interact with.)
+
+
+# Evaluation metric: MAP@10
+# -----------------
+
+Any kind of recommender algorithm you wish (e.g., collaborative-filtering, content-based, hybrid, etc.) written in Python or R
+# ----------------------------------------
+
+# Dataset description
+# -------------------
+
+426k interactions with 30911 users and 18495 items
+
+# Interactions files (URM)
+# ------------------------
+data_train.csv
+
+user-item pair means the user interacted with the item. Compact representation of URM
+Interaction:  a user did buy a product), then goal is to recommend users products to buy
+
+# Item content files (ICM)
+# ------------------------
+- price: price of each item
+- asset: description of the item (id)
+- sub_class: category of the item (number)
+
+# User content files (User Content Matrix)
+# ----------------------------------------
+
+Demographics about users: age, region
+- Region is a numerical identifier
+
+# Submission file (sample_submission.csv)
+#----------------------------------------
+
+Each row is a user (user_id , id of 10 items to recommend separated by a space)
+(1, 0 1 2 3 4 5 6 7 8 9)
+
+- Order is important in MAP: The items are ordered by relevance (most important first)
+    - different orders may provide different MAP
+- Leave tags for columns at the beginning ==> user_id, item_list
+
+
+# Important: avoid overfitting the public test set
+# ------------------------------------------------
+
+- Download train set and perform local and split train/test locally before making a submission
+- compare local score with score given on the public test. If there are close, the model is not overfitting the local test set
+
