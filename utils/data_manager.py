@@ -6,21 +6,27 @@
 """
 
 import scipy.sparse as sps
+import numpy as np
 
 DATASET_FOLDER = "dataset/"
 
 # global vars
+# -----------
+
 user_list = []
 item_list = []
 num_interactions = 0
 
 
-def build_urm():
+# Build User Rating Matrix from training data
+# -------------------------------------------
+
+def build_URM():
 	global user_list
 	global item_list
 	global num_interactions
 
-	print("Loading data_train ... ", end="\n")
+	print(" ... Loading data_train ... ", end="\n")
 
 	matrix_tuples = []
 
@@ -41,8 +47,7 @@ def build_urm():
 	item_list = list(item_list)
 	rating_list = list(rating_list)
 
-	URM = sps.coo_matrix((rating_list, (user_list, item_list)), shape=None) # (data, (row, col))
-	URM = URM.tocsr()  # put in Compressed Sparse Row format
+	URM = csr_sparse_matrix(rating_list, user_list, item_list)
 
 	return URM
 
@@ -66,6 +71,16 @@ def row_split(row_string, is_URM):
 	return result
 
 
+# Matrix Compressed Sparse Row format
+# -----------------------------------
+
+def csr_sparse_matrix(data, row, col, shape=None):
+	csr_matrix = sps.coo_matrix((data, (row, col)), shape=shape)
+	csr_matrix = csr_matrix.tocsr()
+
+	return csr_matrix
+
+
 # Getters
 # -------
 
@@ -73,14 +88,63 @@ def row_split(row_string, is_URM):
 def get_user_list_unique():
 	list_unique = list(set(user_list)) # remove duplicates
 	return list_unique
-
 # Get item_id list
 def get_item_list_unique():
 	list_unique = list(set(item_list)) # remove duplicates
 	return list_unique
 
 
+# Get statistics from interactions in the URM
+# -------------------------------------------
+
+def interactions_statistics(): 
+	print("\n ... Statistics on URM ... ")
+
+	print("No. of interactions in the URM is {}".format(num_interactions))
+
+	user_list_unique = get_user_list_unique()
+	item_list_unique = get_item_list_unique()
+
+	num_users = len(user_list_unique)
+	num_items = len(item_list_unique)
+
+	print("No. of items\t {}, No. of users\t {}".format(num_items, num_users))
+	print("Max ID items\t {}, Max ID users\t {}\n".format(max(item_list_unique), max(user_list_unique)))
+	print("Average interactions per user {:.2f}".format(num_interactions / num_users))
+	print("Average interactions per item {:.2f}\n".format(num_interactions / num_items))
+
+	# sparsity = zero-valued elements / total number of elements
+	print("Sparsity {:.2f} %\n".format((1 - float(num_interactions) / (num_items * num_users)) * 100))
+
+
+# Train/test data splitting
+# -------------------------
+
+def train_test_holdout(URM, train_perc):
+	number_interactions = URM.nnz  # number of nonzero values
+	URM = URM.tocoo() # Coordinate list matrix (COO)
+	shape = URM.shape
+
+	#  URM.row: user_list, URM.col: item_list, URM.data: rating_list
+
+	# Take random samples of data using a boolean mask
+	train_mask = np.random.choice(
+					[True, False],
+				  	number_interactions, p=[train_perc, 1-train_perc]) # train_perc for True, 1-train_perc for False
+
+	URM_train = csr_sparse_matrix(URM.data[train_mask], URM.row[train_mask], URM.col[train_mask], shape=shape)
+
+	test_mask = np.logical_not(train_mask) # remaining samples
+	URM_test = csr_sparse_matrix(URM.data[test_mask], URM.row[test_mask], URM.col[test_mask], shape=shape)
+
+	return URM_train, URM_test
+
 
 # Build URM
-URM = build_urm()
+URM = build_URM()
 
+interactions_statistics()
+
+# Train/test data splitting
+TRAIN_PERC = 0.8
+URM_train, URM_test = train_test_holdout(URM, TRAIN_PERC)

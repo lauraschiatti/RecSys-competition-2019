@@ -9,7 +9,7 @@
 
 
 # Train-test split : leave-one-out
-# ---------------
+# --------------------------------
 - Sampling one random interaction from each user profile (remove one random interaction)
 - Therefore there is only one positive interaction for each user in the test set
 
@@ -20,16 +20,15 @@
 
 
 # Evaluation metric: MAP@10
-# -----------------
+# -------------------------
 
 
 Any kind of recommender algorithm you wish (e.g., collaborative-filtering, content-based, hybrid, etc.) written in Python or R
 # ----------------------------------------
 
 
-# Dataset description: 426k interactions with 30911 users and 18495 items
+# Dataset description:
 # -------------------
-
 each file contains coordinates and the values of the non-zero cells of the sparse matrix that represent the relative information
 
 
@@ -45,7 +44,7 @@ each file contains coordinates and the values of the non-zero cells of the spars
     row       |     col       |       data
 ______________|_______________|__________________
 
-  user_id        item_id      value of the preference
+  user_id        item_id        value of the preference (rating)
 
 
 
