@@ -2,7 +2,7 @@
 import os
 from datetime import datetime
 
-def create_csv(top_10_items, results_dir='./submissions'):
+def create_csv(top_10_items, recommender, results_dir='./submissions'):
 
 	csv_fname = 'submission_'
 	csv_fname += datetime.now().strftime('%b%d_%H-%M-%S')+ '.csv'
@@ -25,4 +25,5 @@ for user_id in range(100): # users
 		top_10_items[user_id] = item_list.strip() # remove trailing space
 
 
-create_csv(top_10_items)
+# @Todo: save on a different folder according to the recommender used for the predictions
+create_csv(top_10_items, '')

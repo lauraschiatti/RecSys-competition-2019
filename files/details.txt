@@ -27,7 +27,6 @@ Any kind of recommender algorithm you wish (e.g., collaborative-filtering, conte
 # ----------------------------------------
 
 
-
 # Dataset description: 426k interactions with 30911 users and 18495 items
 # -------------------
 
