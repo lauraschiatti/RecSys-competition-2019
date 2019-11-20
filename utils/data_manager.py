@@ -8,7 +8,10 @@
 import scipy.sparse as sps
 import numpy as np
 
-DATASET_FOLDER = "dataset/"
+dataset_dir = "dataset/"
+data_train = "dataset/data_train.csv"
+data_target_users = "dataset/data_target_users_test.csv"
+
 
 # global vars
 # -----------
@@ -22,15 +25,13 @@ num_interactions = 0
 # -------------------------------------------
 
 def build_URM():
-	global user_list
-	global item_list
-	global num_interactions
+	global user_list, item_list, num_interactions
 
-	print(" ... Loading data_train ... ", end="\n")
+	print("\n ... Loading train data ... ", end="\n")
 
 	matrix_tuples = []
 
-	with open(DATASET_FOLDER + 'data_train.csv', 'r') as file:  # read file's content
+	with open(data_train, 'r') as file:  # read file's content
 		next(file) # skip header row
 		for line in file:
 			num_interactions += 1
@@ -81,23 +82,10 @@ def csr_sparse_matrix(data, row, col, shape=None):
 	return csr_matrix
 
 
-# Getters
-# -------
-
-# Get user_id list
-def get_user_list_unique():
-	list_unique = list(set(user_list)) # remove duplicates
-	return list_unique
-# Get item_id list
-def get_item_list_unique():
-	list_unique = list(set(item_list)) # remove duplicates
-	return list_unique
-
-
 # Get statistics from interactions in the URM
 # -------------------------------------------
 
-def interactions_statistics(): 
+def interactions_statistics():
 	print("\n ... Statistics on URM ... ")
 
 	print("No. of interactions in the URM is {}".format(num_interactions))
@@ -127,7 +115,7 @@ def train_test_holdout(URM, train_perc):
 
 	#  URM.row: user_list, URM.col: item_list, URM.data: rating_list
 
-	# Take random samples of data using a boolean mask
+	# Sampling strategy: take random samples of data using a boolean mask
 	train_mask = np.random.choice(
 					[True, False],
 				  	number_interactions, p=[train_perc, 1-train_perc]) # train_perc for True, 1-train_perc for False
@@ -140,11 +128,30 @@ def train_test_holdout(URM, train_perc):
 	return URM_train, URM_test
 
 
-# Build URM
-URM = build_URM()
 
-interactions_statistics()
+# Getters
+# -------
 
-# Train/test data splitting
-TRAIN_PERC = 0.8
-URM_train, URM_test = train_test_holdout(URM, TRAIN_PERC)
+# Get all user_id list
+def get_user_list_unique():
+	list_unique = list(set(user_list)) # remove duplicates
+	return list_unique
+
+# Get item_id list
+def get_item_list_unique():
+	list_unique = list(set(item_list)) # remove duplicates
+	return list_unique
+
+# Get target user_id list
+def get_target_users():
+	target_user_id_list = []
+
+
+	with open(data_target_users, 'r') as file:  # read file's content
+		next(file)  # skip header row
+		for line in file:
+			# each line is a user_id
+			target_user_id_list.append(int(line.strip())) # remove trailing space
+
+	return target_user_id_list
+

@@ -3,6 +3,7 @@
        ##### Recommender System 2019 Challenge Polimi #####
 # ------------------------------------------------------------------ #
 
+--- learning from implicit feedback
 
 # App domain: Online store. The dataset contains 4 months of transactions collected from an online supermarket.
 # ----------
@@ -12,6 +13,8 @@
 # --------------------------------
 - Sampling one random interaction from each user profile (remove one random interaction)
 - Therefore there is only one positive interaction for each user in the test set
+
+?? for every user one item-interaction is randomly selected to be part of the test set.
 
 
 # Goal: build a top-10 recommender
@@ -75,18 +78,23 @@ ______________|_______________|__________________
 
 
 
-# Submission file (sample_submission.csv)   HEADERS [user_id],[items_list]
-#----------------------------------------
+###### alg_sample_submission.csv ######  submission file
+# ------------------------------------------------------
 
- HEADERS [user_id],[items_list]
+HEADERS [user_id],[items_list]
 
 Each row is a user [user_id] , [ordered list of 10 recommended items separated by a space]
 
-(1, 0 1 2 3 4 5 6 7 8 9)
-
 - Order is important in MAP: The items are ordered by relevance (most important first)
-    - different orders may provide different MAP
-- Leave tags for columns at the beginning ==> user_id, item_list
+                             Different orders may provide different MAP
+
+
+###### data_target_users_test.csv ###### Target users for submission
+# ---------------------------
+As you may see from the sample_submission file, not all users are associated to test data.
+The following file contains the list of the users you have to provide the recommendations for.
+Users not in this list should not appear in your submissions.
+
 
 
 # Important: avoid overfitting the public test set
