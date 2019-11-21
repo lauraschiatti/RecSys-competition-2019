@@ -8,7 +8,6 @@
 import os
 from datetime import datetime
 
-#todo: remove '[' ']',
 def create_csv(top_10_items, recommender):
 	print("\nGenerating submission csv ... ")
 
@@ -30,4 +29,5 @@ def create_csv(top_10_items, recommender):
 		f.write(fieldnames + '\n')
 
 		for user_id, item_list in top_10_items.items():
-			f.write(str(user_id) + ',' + str(item_list) + '\n')
+			row = str(user_id) + ',' + str(item_list) + '\n'
+			f.write(row.strip("[]")) # remove '[' ']' from string

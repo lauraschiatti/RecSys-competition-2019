@@ -19,7 +19,7 @@ URM = data.build_URM()
 data.interactions_statistics()
 
 
-# Train/test data splitting #@todo: local train_test_holdout should be LOO too?
+# Train/test data splitting # todo: local train_test_holdout should be LOO too?
 # -------------------------
 
 train_perc = 0.8
