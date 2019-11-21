@@ -30,4 +30,4 @@ def create_csv(top_10_items, recommender):
 
 		for user_id, item_list in top_10_items.items():
 			row = str(user_id) + ',' + str(item_list) + '\n'
-			f.write(row.strip("[]")) # remove '[' ']' from string
+			f.write(row.replace('[', '').replace(']', ''))  # remove '[' ']' from item_list string

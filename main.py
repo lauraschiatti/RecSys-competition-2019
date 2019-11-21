@@ -8,7 +8,7 @@ from utils import data_manager as data
 from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 
-from recommenders import RandomRecommender
+from recommenders import RandomRecommender, TopPopRecommender, GlobalEffectsRecommender
 
 
 # Build URM
@@ -29,7 +29,7 @@ URM_train, URM_test = data.train_test_holdout(URM, train_perc)
 # Train model without left-out ratings)
 # ------------------------------------
 
-recommender_list = ['RandomRecommender', 'TopPopRecommender']
+recommender_list = ['RandomRecommender', 'TopPopRecommender', 'GlobalEffectsRecommender']
 
 print("Recommender Systems: ")
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -47,16 +47,26 @@ while True:
 			recommender = RandomRecommender.RandomRecommender()
 			recommender.fit(URM_train)
 
+		# todo: check TopPop and GlobalEffects
+		elif recomm_type == 'TopPopRecommender':
+			recommender = TopPopRecommender.TopPopRecommender()
+			recommender.fit(URM_train)
+
+		elif recomm_type == 'GlobalEffectsRecommender':
+			recommender = GlobalEffectsRecommender.GlobalEffectsRecommender()
+			recommender.fit(URM_train)
+
 		break
 
 	except (ValueError, IndexError):
 		print('Error. Please enter number between 1 and {}'.format(i))
 
 
-# #  Evaluate model on left-out ratings (URM_test)
-# # ----------------------------------------------
+# Evaluate model on left-out ratings (URM_test)
+# ---------------------------------------------
 
 eval.evaluate_algorithm(URM_test, recommender)
+
 
 # Compute top-10 recommendations for each target user
 # ---------------------------------------------------
@@ -70,10 +80,11 @@ for user_id in target_user_id_list:  # target users
 	for item in range(10):  # recommended_items
 		item_list = recommender.recommend(user_id)
 
-		top_10_items[user_id] = item_list#.strip() # remove trailing space
+		top_10_items[user_id] = item_list #.strip() # remove trailing space
+
 
 # Prints the nicely formatted dictionary
-import pprint
-pprint.pprint(top_10_items)
+# import pprint
+# pprint.pprint(top_10_items)
 
 create_csv.create_csv(top_10_items, recomm_type)
