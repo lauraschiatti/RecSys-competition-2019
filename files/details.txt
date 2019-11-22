@@ -11,10 +11,14 @@
 
 # Train-test split : leave-one-out
 # --------------------------------
-- Sampling one random interaction from each user profile (remove one random interaction)
-- Therefore there is only one positive interaction for each user in the test set
+            - Sampling one random interaction from each user profile (remove one random interaction)
+            - Therefore there is only one positive interaction for each user in the test set
 
-?? for every user one item-interaction is randomly selected to be part of the test set.
+            ?? for every user one item-interaction is randomly selected to be part of the test set.
+
+            ==> leaveone-out technique to obtain the training set and test set,
+            which means for every user, there is a test item her has not
+            interacted with?
 
 
 # Goal: build a top-10 recommender
@@ -24,6 +28,7 @@
 
 # Evaluation metric: MAP@10
 # -------------------------
+- Compared the performance of our proposed recommender with 10 baselines
 
 
 Any kind of recommender algorithm you wish (e.g., collaborative-filtering, content-based, hybrid, etc.) written in Python or R
@@ -43,6 +48,7 @@ each file contains coordinates and the values of the non-zero cells of the spars
 - implicit ratings (implicit preferences expressed by users)
 - contains both cold items and cold users
 - user-item pair means the user interacted with the item (the user did buy a product)
+
 
     row       |     col       |       data
 ______________|_______________|__________________

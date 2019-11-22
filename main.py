@@ -16,25 +16,31 @@ from recommenders import RandomRecommender, TopPopRecommender, GlobalEffectsReco
 
 URM = data.build_URM()
 
-data.interactions_statistics()
+data.get_statistics_URM()
+
+# todo: deal with both cold items and cold users
 
 
-# Train/test data splitting # todo: local train_test_holdout should be LOO too?
+# Split into train and test set # todo: local train_test_holdout should be LOO too?
 # -------------------------
 
-train_perc = 0.8
-URM_train, URM_test = data.train_test_holdout(URM, train_perc)
+train_split = 0.8
+URM_train, URM_test = data.train_test_holdout(URM, train_split)
 
+# NOTE: if the test data contains a lot of low rating interactions,
+	# those interactions are penalized by GlobalEffects
+URM_test_positive_only = data.URM_test_positive_only(URM_test)
+
+# URM_train, URM_test =  data.get_URM_train_for_test_fold(URM, n_test_fold=1)
 
 # Train model without left-out ratings)
 # ------------------------------------
 
 recommender_list = ['RandomRecommender', 'TopPopRecommender', 'GlobalEffectsRecommender']
 
-print("Recommender Systems: ")
+print('Recommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
 	print('{}. {}'.format(i, recomm_type))
-
 
 while True:
 	try:
@@ -43,14 +49,14 @@ while True:
 		print('\n ... {} ... '.format(recomm_type))
 
 		# fit model
-		if recomm_type == "RandomRecommender":
+		if recomm_type == 'RandomRecommender':
 			recommender = RandomRecommender.RandomRecommender()
 			recommender.fit(URM_train)
 
-		# todo: check TopPop and GlobalEffects
 		elif recomm_type == 'TopPopRecommender':
 			recommender = TopPopRecommender.TopPopRecommender()
 			recommender.fit(URM_train)
+
 
 		elif recomm_type == 'GlobalEffectsRecommender':
 			recommender = GlobalEffectsRecommender.GlobalEffectsRecommender()
@@ -62,29 +68,45 @@ while True:
 		print('Error. Please enter number between 1 and {}'.format(i))
 
 
+
 # Evaluate model on left-out ratings (URM_test)
 # ---------------------------------------------
 
+# positive_only = False
+#
+# if positive_only:
 eval.evaluate_algorithm(URM_test, recommender)
+
+# else:
+# 	print('\nevaluation of {} with URM_test_positive_only: '.format(recomm_type))
+# 	eval.evaluate_algorithm(URM_test_positive_only, recommender)
+
 
 
 # Compute top-10 recommendations for each target user
 # ---------------------------------------------------
 
-top_10_items = {}
-target_user_id_list = data.get_target_users()
-
-for user_id in target_user_id_list:  # target users
-
-	item_list = ''
-	for item in range(10):  # recommended_items
-		item_list = recommender.recommend(user_id)
-
-		top_10_items[user_id] = item_list #.strip() # remove trailing space
+predictions = input('\nCompute and save top10 predictions ?:'
+				 '1 - Yes' 
+                 '2 - No')
 
 
-# Prints the nicely formatted dictionary
-# import pprint
-# pprint.pprint(top_10_items)
+if predictions == '1':
 
-create_csv.create_csv(top_10_items, recomm_type)
+	top_10_items = {}
+	target_user_id_list = data.get_target_users()
+
+	for user_id in target_user_id_list:  # target users
+
+		item_list = ''
+		for item in range(10):  # recommended_items
+			item_list = recommender.recommend(user_id)
+
+			top_10_items[user_id] = item_list  # .strip() # remove trailing space
+
+	# Prints the nicely formatted dictionary
+	# import pprint
+	# pprint.pprint(top_10_items)
+
+	# save predictions on csv file
+	create_csv.create_csv(top_10_items, recomm_type)

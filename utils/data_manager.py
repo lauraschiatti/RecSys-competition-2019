@@ -72,6 +72,16 @@ def row_split(row_string, is_URM):
 	return result
 
 
+# Test set with positive interactions only
+# ----------------------------------------
+
+def URM_test_positive_only(URM_test):
+	URM_test_positive_only = URM_test.copy()
+	URM_test_positive_only.data[URM_test.data<=2] = 0
+	URM_test_positive_only.eliminate_zeros()
+
+	return URM_test_positive_only
+
 # Matrix Compressed Sparse Row format
 # -----------------------------------
 
@@ -85,7 +95,7 @@ def csr_sparse_matrix(data, row, col, shape=None):
 # Get statistics from interactions in the URM
 # -------------------------------------------
 
-def interactions_statistics():
+def get_statistics_URM():
 	print("\n ... Statistics on URM ... ")
 
 	print("No. of interactions in the URM is {}".format(num_interactions))
@@ -105,10 +115,11 @@ def interactions_statistics():
 	print("Sparsity {:.2f} %\n".format((1 - float(num_interactions) / (num_items * num_users)) * 100))
 
 
-# Train/test data splitting
-# -------------------------
+# Train_test data splitting via holdout method
+# --------------------------------------------
 
-def train_test_holdout(URM, train_perc):
+def train_test_holdout(URM, train_split):
+
 	number_interactions = URM.nnz  # number of nonzero values
 	URM = URM.tocoo() # Coordinate list matrix (COO)
 	shape = URM.shape
@@ -118,15 +129,21 @@ def train_test_holdout(URM, train_perc):
 	# Sampling strategy: take random samples of data using a boolean mask
 	train_mask = np.random.choice(
 					[True, False],
-				  	number_interactions, p=[train_perc, 1-train_perc]) # train_perc for True, 1-train_perc for False
+				  	number_interactions,
+					p=[train_split, 1-train_split]) # train_perc for True, 1-train_perc for False
 
-	URM_train = csr_sparse_matrix(URM.data[train_mask], URM.row[train_mask], URM.col[train_mask], shape=shape)
+	URM_train = csr_sparse_matrix(URM.data[train_mask],
+								  URM.row[train_mask],
+								  URM.col[train_mask],
+								  shape=shape)
 
 	test_mask = np.logical_not(train_mask) # remaining samples
-	URM_test = csr_sparse_matrix(URM.data[test_mask], URM.row[test_mask], URM.col[test_mask], shape=shape)
+	URM_test = csr_sparse_matrix(URM.data[test_mask],
+								 URM.row[test_mask],
+								 URM.col[test_mask],
+								 shape=shape)
 
 	return URM_train, URM_test
-
 
 
 # Getters
@@ -154,4 +171,5 @@ def get_target_users():
 			target_user_id_list.append(int(line.strip())) # remove trailing space
 
 	return target_user_id_list
+
 
