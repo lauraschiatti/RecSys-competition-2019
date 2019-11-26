@@ -3,8 +3,6 @@
        ##### Recommender System 2019 Challenge Polimi #####
 # ------------------------------------------------------------------ #
 
---- learning from implicit feedback
-
 # App domain: Online store. The dataset contains 4 months of transactions collected from an online supermarket.
 # ----------
 
@@ -37,7 +35,8 @@ Any kind of recommender algorithm you wish (e.g., collaborative-filtering, conte
 
 # Dataset description:
 # -------------------
-each file contains coordinates and the values of the non-zero cells of the sparse matrix that represent the relative information
+each file contains coordinates and the values of the non-zero cells of the sparse matrix
+that represent the relative information
 
 
 # Interactions files (URM)
@@ -45,9 +44,10 @@ each file contains coordinates and the values of the non-zero cells of the spars
 
 ###### data_train.csv ######  training set describing interactions
 
-- implicit ratings (implicit preferences expressed by users)
+- implicit ratings: what items a user purchased
+    # user-item pair means the user interacted with the item (the user did buy a product)
+
 - contains both cold items and cold users
-- user-item pair means the user interacted with the item (the user did buy a product)
 
 
     row       |     col       |       data
@@ -60,8 +60,9 @@ ______________|_______________|__________________
 # Item content files (ICM): additional info about items
 # ------------------------
 
+The values of asset and sub-class refer to a categorization of the items:
+
 ###### data_ICM_asset.csv ######  description of the item (id)
-###### data_ICM_price.csv ######  price of each item (already normalized)
 ###### data_ICM_sub_class.csv ######  categorization of the item (number)
 
     row       |     col       |       data
@@ -69,6 +70,7 @@ ______________|_______________|__________________
 
    item_id       feature_id     value of the cell
 
+###### data_ICM_price.csv ######  price of each item (already normalized)
 
 
 # User content files (User Content Matrix)  additional info about users (demographics)
@@ -83,6 +85,12 @@ ______________|_______________|__________________
    user_id       feature_id     value of the cell
 
 
+###### data_target_users_test.csv ######
+# --------------------------------------
+
+This file contains the list of users that should appear in your submission file (users in the test data)
+
+
 
 ###### alg_sample_submission.csv ######  submission file
 # ------------------------------------------------------
@@ -95,17 +103,14 @@ Each row is a user [user_id] , [ordered list of 10 recommended items separated b
                              Different orders may provide different MAP
 
 
-###### data_target_users_test.csv ###### Target users for submission
-# ---------------------------
-As you may see from the sample_submission file, not all users are associated to test data.
-The following file contains the list of the users you have to provide the recommendations for.
-Users not in this list should not appear in your submissions.
-
-
 
 # Important: avoid overfitting the public test set
 # ------------------------------------------------
 
 - Download train set and perform local and split train/test locally before making a submission
-- compare local score with score given on the public test. If there are close, the model is not overfitting the local test set
+- compare local score with score given on the public test. If there are close,
+    the model is not overfitting the local test set
+
+    - the difference in the leaderboard MAP vs the MAP of the runs against my test set is due to the
+    sampling strategy for splitting training and local test sets
 

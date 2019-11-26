@@ -9,167 +9,250 @@ import scipy.sparse as sps
 import numpy as np
 
 dataset_dir = "dataset/"
-data_train = "dataset/data_train.csv"
-data_target_users = "dataset/data_target_users_test.csv"
+
+# Interactions files (URM)
+data_train = dataset_dir + "/data_train.csv"
+data_target_users = dataset_dir + "/data_target_users_test.csv"
+
+# Item content files (ICM)
+data_ICM_asset = dataset_dir + "/data_ICM_asset.csv"  # description of the item (id)
+data_ICM_price = dataset_dir + "/data_ICM_price.csv"  # price of each item (already normalized)
+data_ICM_sub_class = dataset_dir + "/data_ICM_sub_class.csv"  # categorization of the item (number)
 
 
 # global vars
-# -----------
-
 user_list = []
 item_list = []
 num_interactions = 0
 
-
-# Build User Rating Matrix from training data
+# -------------------------------------------
+# User Rating Matrix from training data
 # -------------------------------------------
 
 def build_URM():
-	global user_list, item_list, num_interactions
+    global user_list, item_list, num_interactions
 
-	print("\n ... Loading train data ... ", end="\n")
+    print("\n ... Loading train data ... ", end="\n")
 
-	matrix_tuples = []
+    matrix_tuples = []
 
-	with open(data_train, 'r') as file:  # read file's content
-		next(file) # skip header row
-		for line in file:
-			num_interactions += 1
+    with open(data_train, 'r') as file:  # read file's content
+        next(file)  # skip header row
+        for line in file:
+            if len(line.strip()) != 0: #  ignore lines with only whitespace
+                num_interactions += 1
 
-			# Create a tuple for each interaction (line in the file)
-			matrix_tuples.append(row_split(line, is_URM=True))
+                # Create a tuple for each interaction (line in the file)
+                matrix_tuples.append(row_split(line))
 
+    # Separate user_id, item_id and rating
+    user_list, item_list, rating_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
 
-	# Separate user_id, item_id and rating
-	user_list, item_list, rating_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
+    # Create lists of all users, items and contents (ratings)
+    user_list = list(user_list) # row
+    item_list = list(item_list) # col
+    rating_list = list(rating_list) # data
 
-	# Convert values to list
-	user_list = list(user_list)
-	item_list = list(item_list)
-	rating_list = list(rating_list)
+    URM = csr_sparse_matrix(rating_list, user_list, item_list)
 
-	URM = csr_sparse_matrix(rating_list, user_list, item_list)
-
-	return URM
-
-
-def row_split(row_string, is_URM):
-	# file format: 0,3568,1.0
-
-	split = row_string.split(",")
-	split[2] = split[2].replace("\n", "")
-
-	split[0] = int(split[0])
-	split[1] = int(split[1])
-
-	if is_URM == True:
-		split[2] = float(split[2])  # rating is a float
-	elif is_URM == False:
-		split[2] = str(split[2])  # tag is a string, not a float like the rating
-
-
-	result = tuple(split)
-	return result
-
-
-# Test set with positive interactions only
-# ----------------------------------------
-
-def URM_test_positive_only(URM_test):
-	URM_test_positive_only = URM_test.copy()
-	URM_test_positive_only.data[URM_test.data<=2] = 0
-	URM_test_positive_only.eliminate_zeros()
-
-	return URM_test_positive_only
-
-# Matrix Compressed Sparse Row format
-# -----------------------------------
-
-def csr_sparse_matrix(data, row, col, shape=None):
-	csr_matrix = sps.coo_matrix((data, (row, col)), shape=shape)
-	csr_matrix = csr_matrix.tocsr()
-
-	return csr_matrix
+    return URM
 
 
 # Get statistics from interactions in the URM
 # -------------------------------------------
 
-def get_statistics_URM():
-	print("\n ... Statistics on URM ... ")
+def get_statistics_URM(URM):
+    print("\n ... Statistics on URM ... ")
 
-	print("No. of interactions in the URM is {}".format(num_interactions))
+    print("No. of interactions in the URM is {}".format(num_interactions))
 
-	user_list_unique = get_user_list_unique()
-	item_list_unique = get_item_list_unique()
+    user_list_unique = get_user_list_unique()
+    item_list_unique = get_item_list_unique()
 
-	num_users = len(user_list_unique)
-	num_items = len(item_list_unique)
+    n_unique_users = len(user_list_unique)
+    n_unique_items = len(item_list_unique)
 
-	print("No. of items\t {}, No. of users\t {}".format(num_items, num_users))
-	print("Max ID items\t {}, Max ID users\t {}\n".format(max(item_list_unique), max(user_list_unique)))
-	print("Average interactions per user {:.2f}".format(num_interactions / num_users))
-	print("Average interactions per item {:.2f}\n".format(num_interactions / num_items))
+    n_users, n_items = URM.shape
 
-	# sparsity = zero-valued elements / total number of elements
-	print("Sparsity {:.2f} %\n".format((1 - float(num_interactions) / (num_items * num_users)) * 100))
+    print("No. of unique items\t {}, No. of unique users\t {}".format(n_items, n_users))
+    print("No. of items\t {}, No. of users\t {}".format(n_unique_items, n_unique_users))
+    # print("\tMax ID items\t {}, Max ID users\t {}\n".format(max(item_list_unique), max(user_list_unique)))
 
 
-# Train_test data splitting via holdout method
-# --------------------------------------------
+use_validation_set = False
+def get_statistics_splitted_URM(SPLIT_URM_DICT):
 
-def train_test_holdout(URM, train_split):
+    print("\n ... Statistics on splitted URM ... ")
 
-	number_interactions = URM.nnz  # number of nonzero values
-	URM = URM.tocoo() # Coordinate list matrix (COO)
-	shape = URM.shape
+    n_users, n_items = SPLIT_URM_DICT["URM_train"].shape
 
-	#  URM.row: user_list, URM.col: item_list, URM.data: rating_list
+    statistics_string = "Num items: {}\n" \
+                        "Num users: {}\n" \
+                        "Train \t\tinteractions {}, \tdensity {:.2E}\n".format(
+        n_items,
+        n_users,
+        SPLIT_URM_DICT["URM_train"].nnz, compute_density(SPLIT_URM_DICT["URM_train"]))
 
-	# Sampling strategy: take random samples of data using a boolean mask
-	train_mask = np.random.choice(
-					[True, False],
-				  	number_interactions,
-					p=[train_split, 1-train_split]) # train_perc for True, 1-train_perc for False
+    if use_validation_set:
+        statistics_string += "Validation \tinteractions {}, \tdensity {:.2E}\n".format(
+            SPLIT_URM_DICT["URM_validation"].nnz, compute_density(SPLIT_URM_DICT["URM_validation"]))
 
-	URM_train = csr_sparse_matrix(URM.data[train_mask],
-								  URM.row[train_mask],
-								  URM.col[train_mask],
-								  shape=shape)
+    statistics_string += "Test \t\tinteractions {}, \tdensity {:.2E}\n".format(
+        SPLIT_URM_DICT["URM_test"].nnz, compute_density(SPLIT_URM_DICT["URM_test"]))
 
-	test_mask = np.logical_not(train_mask) # remaining samples
-	URM_test = csr_sparse_matrix(URM.data[test_mask],
-								 URM.row[test_mask],
-								 URM.col[test_mask],
-								 shape=shape)
+    print(statistics_string)
 
-	return URM_train, URM_test
 
+def split_train_validation_random_holdout(URM, train_split):
+    number_interactions = URM.nnz  # number of nonzero values
+    URM = URM.tocoo()  # Coordinate list matrix (COO)
+    shape = URM.shape
+
+    #  URM.row: user_list, URM.col: item_list, URM.data: rating_list
+
+    # Sampling strategy: take random samples of data using a boolean mask
+    train_mask = np.random.choice(
+        [True, False],
+        number_interactions,
+        p=[train_split, 1 - train_split])  # train_perc for True, 1-train_perc for False
+
+    URM_train = csr_sparse_matrix(URM.data[train_mask],
+                                  URM.row[train_mask],
+                                  URM.col[train_mask],
+                                  shape=shape)
+
+    test_mask = np.logical_not(train_mask)  # remaining samples
+    URM_test = csr_sparse_matrix(URM.data[test_mask],
+                                 URM.row[test_mask],
+                                 URM.col[test_mask],
+                                 shape=shape)
+
+    return URM_train, URM_test
+
+# -------------------------------------------------------------------------
+# Build Item Content Matrix with three features: asset, price and sub-class
+# -------------------------------------------------------------------------
+
+def buildICM():
+    # features = [‘asset’, ’price’, ’subclass’] info about products
+    global user_list, item_list, num_interactions
+#
+#     print("\n ... Loading train data ... ", end="\n")
+#
+#     matrix_tuples = []
+#
+#     with open(data_train, 'r') as file:  # read file's content
+#         next(file)  # skip header row
+#         for line in file:
+#             num_interactions += 1
+#
+#             # Create a tuple for each interaction (line in the file)
+#             matrix_tuples.append(row_split(line))
+#
+#     # Separate user_id, item_id and rating
+#     user_list, item_list, rating_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
+#
+#     # Convert values to list# Create lists of all users, items and contents (ratings)
+#     user_list = list(user_list)
+#     item_list = list(item_list)
+#     content_list = list(content_list)
+#     timestamp_list = list(timestamp_list)
+#
+#     return user_list, item_list, content_list, timestamp_list
+#
+#     n_items = URM.shape[1]
+#     n_tags = max(tag_list_ICM) + 1
+#     ICM_shape = (n_items, n_tags)
+#
+#     ones = np.ones(len(tag_list_ICM))
+#
+#     ICM = data.csr_sparse_matrix(ones, item_list_ICM, tag_list_ICM, ICM_shape)
+
+# def get_statistics_ICM(self):
+#
+#     self._assert_is_initialized()
+#
+#     if len(self.dataReader_object.get_loaded_ICM_names()) > 0:
+#
+#         for ICM_name, ICM_object in self.SPLIT_ICM_DICT.items():
+#             n_items, n_features = ICM_object.shape
+#
+#             statistics_string = "\tICM name: {}, Num features: {}, feature occurrences: {}, density {:.2E}".format(
+#                 ICM_name,
+#                 n_features,
+#                 ICM_object.nnz,
+#                 compute_density(ICM_object)
+#             )
+#
+#             print(statistics_string)
+#
+#         print("\n")
+
+
+
+def compute_density(URM):
+
+    n_users, n_items = URM.shape
+    n_interactions = URM.nnz
+
+    # This avoids the fixed bit representation of numpy preventing
+    # an overflow when computing the product
+    n_items = float(n_items)
+    n_users = float(n_users)
+
+    if n_interactions == 0:
+        return 0.0
+
+    return n_interactions/(n_items*n_users)
 
 # Getters
 # -------
 
 # Get all user_id list
 def get_user_list_unique():
-	list_unique = list(set(user_list)) # remove duplicates
-	return list_unique
+    list_unique = list(set(user_list))  # remove duplicates
+    return list_unique
+
 
 # Get item_id list
 def get_item_list_unique():
-	list_unique = list(set(item_list)) # remove duplicates
-	return list_unique
+    list_unique = list(set(item_list))  # remove duplicates
+    return list_unique
+
 
 # Get target user_id list
 def get_target_users():
-	target_user_id_list = []
+    target_user_id_list = []
+
+    with open(data_target_users, 'r') as file:  # read file's content
+        next(file)  # skip header row
+        for line in file:
+            # each line is a user_id
+            target_user_id_list.append(int(line.strip()))  # remove trailing space
+
+    return target_user_id_list
 
 
-	with open(data_target_users, 'r') as file:  # read file's content
-		next(file)  # skip header row
-		for line in file:
-			# each line is a user_id
-			target_user_id_list.append(int(line.strip())) # remove trailing space
+def row_split(row_string):
+    # file format: 0,3568,1.0
 
-	return target_user_id_list
+    split = row_string.split(",")
+    split[2] = split[2].replace("\n", "")
+
+    split[0] = int(split[0])
+    split[1] = int(split[1])
+    split[2] = float(split[2])  # rating is a float
+
+    result = tuple(split)
+    return result
 
 
+# Matrix Compressed Sparse Row format
+# -----------------------------------
+
+def csr_sparse_matrix(data, row, col, shape=None):
+    csr_matrix = sps.coo_matrix((data, (row, col)), shape=shape)
+    csr_matrix = csr_matrix.tocsr()
+
+
+    return csr_matrix
