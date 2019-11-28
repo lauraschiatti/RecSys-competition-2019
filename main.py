@@ -54,7 +54,7 @@ data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 # Train model without left-out ratings)
 # ------------------------------------
 
-recommender_list = ['RandomRecommender', 'TopPopRecommender'] #'GlobalEffectsRecommender']
+recommender_list = ['RandomRecommender', 'TopPopRecommender']
 
 print('Recommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -75,10 +75,6 @@ while True:
             recommender = TopPopRecommender.TopPopRecommender()
             recommender.fit(URM_train)
 
-        # elif recomm_type == 'GlobalEffectsRecommender':
-        #     recommender = GlobalEffectsRecommender.GlobalEffectsRecommender()
-        #     recommender.fit(URM_train)
-
         break
 
     except (ValueError, IndexError):
@@ -97,9 +93,10 @@ eval.evaluate_algorithm(URM_test, recommender)
 predictions = input('\nCompute and save top10 predictions?: '
                     'y - Yes  n - No\n')
 
+top_10_items = {}
+
 if predictions == 'y':
 
-    top_10_items = {}
     target_user_id_list = data_manager.get_target_users()
 
     for user_id in target_user_id_list:  # target users
