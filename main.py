@@ -8,7 +8,7 @@ from utils import data_manager
 from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 from utils import data_splitter
-from recommenders import RandomRecommender, TopPopRecommender, GlobalEffectsRecommender
+from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender
 
 # Build URM
 # ---------
@@ -28,7 +28,6 @@ leave_random_out = True
 splitted_data = data_splitter.split_train_leave_k_out_user_wise(URM, k_out=k_out_value,
                                                            use_validation_set=use_validation_set,
                                                            leave_random_out=leave_random_out)
-
 
 # splitted_data = data_manager.split_train_validation_random_holdout(URM, train_split=0.8)
 
@@ -54,7 +53,7 @@ data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 # Train model without left-out ratings)
 # ------------------------------------
 
-recommender_list = ['RandomRecommender', 'TopPopRecommender']
+recommender_list = ['RandomRecommender', 'TopPopRecommender', 'UserCFKNNRecommender']
 
 print('Recommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -74,6 +73,13 @@ while True:
         elif recomm_type == 'TopPopRecommender':
             recommender = TopPopRecommender.TopPopRecommender()
             recommender.fit(URM_train)
+
+        elif recomm_type == 'UserCFKNNRecommender':
+            topK = 50
+            shrink = 100
+
+            recommender = UserCFKNNRecommender.UserCFKNNRecommender(URM_train)
+            recommender.fit(topK=topK, shrink=shrink)
 
         break
 

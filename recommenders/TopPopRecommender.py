@@ -24,6 +24,7 @@ class TopPopRecommender(object):
         # print("Number of items with zero interactions {}".
         #       format(np.sum(item_popularity == 0)))
 
+
     def recommend(self, user_id, at=10, remove_seen=True):
         if remove_seen: #  always remove seen items if your purpose is to recommend "new" ones
 

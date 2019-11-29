@@ -19,11 +19,11 @@ data_ICM_asset = dataset_dir + "/data_ICM_asset.csv"  # description of the item 
 data_ICM_price = dataset_dir + "/data_ICM_price.csv"  # price of each item (already normalized)
 data_ICM_sub_class = dataset_dir + "/data_ICM_sub_class.csv"  # categorization of the item (number)
 
-
 # global vars
 user_list = []
 item_list = []
 num_interactions = 0
+
 
 # -------------------------------------------
 # User Rating Matrix from training data
@@ -129,6 +129,7 @@ def split_train_validation_random_holdout(URM, train_split):
 
     return URM_train, URM_test
 
+
 # -------------------------------------------------------------------------
 # Build Item Content Matrix with three features: asset, price and sub-class
 # -------------------------------------------------------------------------
@@ -204,6 +205,8 @@ def compute_density(URM):
         return 0.0
 
     return n_interactions/(n_items*n_users)
+
+
 
 # Getters
 # -------
