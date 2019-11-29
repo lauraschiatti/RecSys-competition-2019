@@ -8,7 +8,12 @@ Created on 23/04/2019
 import numpy as np
 import scipy.sparse as sps
 
+# Train-Test splitting
+# Keep local split as similar as possible to online split (public split)
+# ----------------------------------------------------------------------
 
+# Leave One Out split:
+# leave out one interaction/user ==> suggested for local split
 def split_train_leave_k_out_user_wise(URM, k_out=1, use_validation_set=True, leave_random_out=True):
     """
     The function splits an URM in two matrices selecting the k_out interactions one user at a time
@@ -107,59 +112,33 @@ def split_train_leave_k_out_user_wise(URM, k_out=1, use_validation_set=True, lea
     print(URM_train.shape)
     return URM_train, URM_test
 
+# Random holdout split: take interactions randomly
+# and do not care about which users were involved in that interaction
+def split_train_validation_random_holdout(URM, train_split):
+    number_interactions = URM.nnz  # number of nonzero values
+    URM = URM.tocoo()  # Coordinate list matrix (COO)
+    shape = URM.shape
 
-#
-# def _split_data_from_original_dataset(self, save_folder_path):
-#     self.dataReader_object.load_data()
-#     self._load_from_DataReader_ICM_and_mappers()
-#
-#     URM = self.dataReader_object.get_URM_all()
-#     URM = sps.csr_matrix(URM)
-#
-#     split_number = 2
-#     if self.use_validation_set:
-#         split_number += 1
-#
-#     # Min interactions at least self.k_out_value for each split +1 for train and validation
-#     min_user_interactions = (split_number - 1) * self.k_out_value + 1
-#
-#     if not self.allow_cold_users:
-#         user_interactions = np.ediff1d(URM.indptr)
-#         user_to_preserve = user_interactions >= min_user_interactions
-#         user_to_remove = np.logical_not(user_to_preserve)
-#
-#         self._print(
-#             "Removing {} ({:.2f} %) of {} users because they have less than the {} interactions required for {} splits ({} for test [and validation if requested] +1 for train)".format(
-#                 URM.shape[0] - user_to_preserve.sum(), (1 - user_to_preserve.sum() / URM.shape[0]) * 100,
-#                 URM.shape[0], min_user_interactions, split_number, self.k_out_value))
-#
-#         URM = URM[user_to_preserve, :]
-#
-#         self.SPLIT_GLOBAL_MAPPER_DICT["user_original_ID_to_index"] = reconcile_mapper_with_removed_tokens(
-#             self.SPLIT_GLOBAL_MAPPER_DICT["user_original_ID_to_index"],
-#             np.arange(0, len(user_to_remove), dtype=np.int)[user_to_remove])
-#
-#     splitted_data = split_train_leave_k_out_user_wise(URM, k_out=self.k_out_value,
-#                                                       use_validation_set=self.use_validation_set,
-#                                                       leave_random_out=self.leave_random_out)
-#
-#     if self.use_validation_set:
-#         URM_train, URM_validation, URM_test = splitted_data
-#
-#     else:
-#         URM_train, URM_test = splitted_data
-#
-#     self.SPLIT_URM_DICT = {
-#         "URM_train": URM_train,
-#         "URM_test": URM_test,
-#     }
-#
-#     if self.use_validation_set:
-#         self.SPLIT_URM_DICT["URM_validation"] = URM_validation
-#
-#     self._save_split(save_folder_path)
-#
-#     self._print("Split complete")
+    #  URM.row: user_list, URM.col: item_list, URM.data: rating_list
+
+    # Sampling strategy: take random samples of data using a boolean mask
+    train_mask = np.random.choice(
+        [True, False],
+        number_interactions,
+        p=[train_split, 1 - train_split])  # train_perc for True, 1-train_perc for False
+
+    URM_train = csr_sparse_matrix(URM.data[train_mask],
+                                  URM.row[train_mask],
+                                  URM.col[train_mask],
+                                  shape=shape)
+
+    test_mask = np.logical_not(train_mask)  # remaining samples
+    URM_test = csr_sparse_matrix(URM.data[test_mask],
+                                 URM.row[test_mask],
+                                 URM.col[test_mask],
+                                 shape=shape)
+
+    return URM_train, URM_test
 
 
 def _verify_data_consistency(self):

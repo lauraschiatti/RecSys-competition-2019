@@ -29,7 +29,7 @@ leave_random_out = True
 #                                                            use_validation_set=use_validation_set,
 #                                                            leave_random_out=leave_random_out)
 #
-splitted_data = data_manager.split_train_validation_random_holdout(URM, train_split=0.8)
+splitted_data = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
 
 
 if use_validation_set:

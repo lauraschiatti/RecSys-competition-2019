@@ -103,32 +103,6 @@ def get_statistics_splitted_URM(SPLIT_URM_DICT):
     print(statistics_string)
 
 
-def split_train_validation_random_holdout(URM, train_split):
-    number_interactions = URM.nnz  # number of nonzero values
-    URM = URM.tocoo()  # Coordinate list matrix (COO)
-    shape = URM.shape
-
-    #  URM.row: user_list, URM.col: item_list, URM.data: rating_list
-
-    # Sampling strategy: take random samples of data using a boolean mask
-    train_mask = np.random.choice(
-        [True, False],
-        number_interactions,
-        p=[train_split, 1 - train_split])  # train_perc for True, 1-train_perc for False
-
-    URM_train = csr_sparse_matrix(URM.data[train_mask],
-                                  URM.row[train_mask],
-                                  URM.col[train_mask],
-                                  shape=shape)
-
-    test_mask = np.logical_not(train_mask)  # remaining samples
-    URM_test = csr_sparse_matrix(URM.data[test_mask],
-                                 URM.row[test_mask],
-                                 URM.col[test_mask],
-                                 shape=shape)
-
-    return URM_train, URM_test
-
 
 # -------------------------------------------------------------------------
 # Build Item Content Matrix with three features: asset, price and sub-class
