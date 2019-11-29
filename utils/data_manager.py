@@ -22,15 +22,16 @@ data_ICM_sub_class = dataset_dir + "/data_ICM_sub_class.csv"  # categorization o
 # global vars
 user_list = []
 item_list = []
-num_interactions = 0
-
+n_interactions = 0
+n_users = 0
+n_items = 0
 
 # -------------------------------------------
 # User Rating Matrix from training data
 # -------------------------------------------
 
 def build_URM():
-    global user_list, item_list, num_interactions
+    global user_list, item_list, n_interactions
 
     print("\n ... Loading train data ... ", end="\n")
 
@@ -40,7 +41,7 @@ def build_URM():
         next(file)  # skip header row
         for line in file:
             if len(line.strip()) != 0: #  ignore lines with only whitespace
-                num_interactions += 1
+                n_interactions += 1
 
                 # Create a tuple for each interaction (line in the file)
                 matrix_tuples.append(row_split(line))
@@ -63,8 +64,9 @@ def build_URM():
 
 def get_statistics_URM(URM):
     print("\n ... Statistics on URM ... ")
+    global n_users, n_items
 
-    print("No. of interactions in the URM is {}".format(num_interactions))
+    print("No. of interactions in the URM is {}".format(n_interactions))
 
     user_list_unique = get_user_list_unique()
     item_list_unique = get_item_list_unique()
@@ -77,7 +79,6 @@ def get_statistics_URM(URM):
     print("No. of unique items\t {}, No. of unique users\t {}".format(n_items, n_users))
     print("No. of items\t {}, No. of users\t {}".format(n_unique_items, n_unique_users))
     # print("\tMax ID items\t {}, Max ID users\t {}\n".format(max(item_list_unique), max(user_list_unique)))
-
 
 use_validation_set = False
 def get_statistics_splitted_URM(SPLIT_URM_DICT):
@@ -103,14 +104,13 @@ def get_statistics_splitted_URM(SPLIT_URM_DICT):
     print(statistics_string)
 
 
-
 # -------------------------------------------------------------------------
 # Build Item Content Matrix with three features: asset, price and sub-class
 # -------------------------------------------------------------------------
 
 def buildICM():
     # features = [‘asset’, ’price’, ’subclass’] info about products
-    global user_list, item_list, num_interactions
+    global user_list, item_list, n_interactions
 #
 #     print("\n ... Loading train data ... ", end="\n")
 #
@@ -119,7 +119,7 @@ def buildICM():
 #     with open(data_train, 'r') as file:  # read file's content
 #         next(file)  # skip header row
 #         for line in file:
-#             num_interactions += 1
+#             n_interactions += 1
 #
 #             # Create a tuple for each interaction (line in the file)
 #             matrix_tuples.append(row_split(line))
@@ -164,7 +164,6 @@ def buildICM():
 #         print("\n")
 
 
-
 def compute_density(URM):
 
     n_users, n_items = URM.shape
@@ -181,7 +180,6 @@ def compute_density(URM):
     return n_interactions/(n_items*n_users)
 
 
-
 # Getters
 # -------
 
@@ -190,12 +188,10 @@ def get_user_list_unique():
     list_unique = list(set(user_list))  # remove duplicates
     return list_unique
 
-
 # Get item_id list
 def get_item_list_unique():
     list_unique = list(set(item_list))  # remove duplicates
     return list_unique
-
 
 # Get target user_id list
 def get_target_users():
@@ -208,6 +204,33 @@ def get_target_users():
             target_user_id_list.append(int(line.strip()))  # remove trailing space
 
     return target_user_id_list
+
+# Get user_id seen items
+def get_user_seen_items(user_id):
+    # seen items: those the user already interacted with
+    user_seen_items = URM[user_id].indices
+
+    return  user_seen_items
+
+# Get interactions of a given user_id (row in URM)
+def get_user_profile(URM, user_id):
+
+    start_user_position = URM.indptr[user_id]
+    end_user_position = URM.indptr[user_id + 1]
+
+    user_profile = URM.indices[start_user_position:end_user_position]
+
+    # or interactions = URM[user_id, :]
+    return user_profile
+
+# Get users that have no Train items
+def perc_user_no_item_train(URM_train):
+    user_no_item_train = np.sum(np.ediff1d(URM_train.indptr) == 0)
+
+    if user_no_item_train != 0:
+        print("Warning: {} ({:.2f} %) of {} users have no Train items \n".format(user_no_item_train,
+                                                                              user_no_item_train / n_users * 100,
+                                                                              n_users))
 
 
 def row_split(row_string):
@@ -230,6 +253,5 @@ def row_split(row_string):
 def csr_sparse_matrix(data, row, col, shape=None):
     csr_matrix = sps.coo_matrix((data, (row, col)), shape=shape)
     csr_matrix = csr_matrix.tocsr()
-
 
     return csr_matrix

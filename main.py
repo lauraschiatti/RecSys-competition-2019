@@ -15,12 +15,18 @@ from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommen
 
 URM = data_manager.build_URM()
 
+# Tricks:
 # todo: deal with both cold items and cold users
+# todo: remove popular items from the training data.
+# (This is appropriate in cases where users can discover these items on their own,
+# and may not find these recommendations useful)
 
 data_manager.get_statistics_URM(URM)
 
+
 # Train/test splitting
 # --------------------
+
 use_validation_set = False
 k_out_value = 1  # Leave One Out (keep 1 interaction/user)
 leave_random_out = True
@@ -28,7 +34,7 @@ leave_random_out = True
 # splitted_data = data_splitter.split_train_leave_k_out_user_wise(URM, k_out=k_out_value,
 #                                                            use_validation_set=use_validation_set,
 #                                                            leave_random_out=leave_random_out)
-#
+
 splitted_data = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
 
 
@@ -45,9 +51,10 @@ SPLIT_URM_DICT = {
 
 assert data_splitter.assert_disjoint_matrices(list(SPLIT_URM_DICT.values()))
 
-
 data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 
+
+data_manager.perc_user_no_item_train(URM_train)
 
 
 # Train model without left-out ratings)
