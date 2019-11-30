@@ -8,7 +8,7 @@ from utils import data_manager
 from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 from utils import data_splitter
-from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender
+from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender
 
 # Build URM
 # ---------
@@ -60,7 +60,7 @@ data_manager.perc_user_no_item_train(URM_train)
 # Train model without left-out ratings)
 # ------------------------------------
 
-recommender_list = ['RandomRecommender', 'TopPopRecommender', 'UserCFKNNRecommender']
+recommender_list = ['RandomRecommender', 'TopPopRecommender', 'UserCFKNNRecommender', 'ItemCFKNNRecommender']
 
 print('Recommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -86,6 +86,13 @@ while True:
             shrink = 100
 
             recommender = UserCFKNNRecommender.UserCFKNNRecommender(URM_train)
+            recommender.fit(topK=topK, shrink=shrink)
+
+        elif recomm_type == 'ItemCFKNNRecommender':
+            topK = 50
+            shrink = 100
+
+            recommender = ItemCFKNNRecommender.ItemCFKNNRecommender(URM_train)
             recommender.fit(topK=topK, shrink=shrink)
 
         break
