@@ -15,6 +15,10 @@ from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommen
 
 URM = data_manager.build_URM()
 
+
+URM = data_manager.remove_cold_items_URM(URM)
+URM = data_manager.remove_cold_users_URM(URM)
+
 # Tricks:
 # todo: deal with both cold items and cold users
 # todo: remove popular items from the training data.

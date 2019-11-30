@@ -26,6 +26,10 @@ n_interactions = 0
 n_users = 0
 n_items = 0
 
+# warm items and users arrays
+warm_users = []
+warm_items = []
+
 # -------------------------------------------
 # User Rating Matrix from training data
 # -------------------------------------------
@@ -163,6 +167,23 @@ def buildICM():
 #
 #         print("\n")
 
+
+def remove_cold_items_URM(URM):
+    global warm_items
+    warm_items_mask = np.ediff1d(URM.tocsc().indptr) > 0
+    warm_items = np.arange(URM.shape[1])[warm_items_mask]
+
+    URM_all = URM[:, warm_items]
+
+    return URM_all
+
+def remove_cold_users_URM(URM):
+    global warm_users
+    warm_users_mask = np.ediff1d(URM.tocsr().indptr) > 0
+    warm_users = np.arange(URM.shape[0])[warm_users_mask]
+
+    URM_all = URM[warm_users, :]
+    return URM_all
 
 def compute_density(URM):
 
