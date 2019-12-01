@@ -255,3 +255,17 @@ def csr_sparse_matrix(data, row, col, shape=None):
     csr_matrix = csr_matrix.tocsr()
 
     return csr_matrix
+
+
+
+# Get test set relevant items for a given user
+def get_relevant_items(user_id, URM_test):
+    relevant_items = URM_test[user_id].indices
+
+    return relevant_items
+
+# Check whether recommended items are relevant
+def get_is_relevant(recommended_items, relevant_items):
+    is_relevant = np.in1d(recommended_items, relevant_items, assume_unique=True) # compare elements in both arrays
+
+    return is_relevant
