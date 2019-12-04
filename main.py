@@ -8,7 +8,7 @@ from utils import data_manager
 from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 from utils import data_splitter
-from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender
+from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender, SLIM_BPR_Recommender
 
 # Build URM
 # ---------
@@ -69,7 +69,7 @@ data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 # Train model without left-out ratings)
 # ------------------------------------
 
-recommender_list = ['RandomRecommender', 'TopPopRecommender', 'UserCFKNNRecommender', 'ItemCFKNNRecommender']
+recommender_list = ['RandomRecommender', 'TopPopRecommender', 'UserCFKNNRecommender', 'ItemCFKNNRecommender', 'SLIM_BPR_Recommender']
 
 print('Recommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -130,6 +130,10 @@ while True:
 
             recommender.fit(topK=topK, shrink=shrink)
 
+        elif recomm_type == 'SLIM_BPR_Recommender':
+            # Train and test model
+            recommender = SLIM_BPR_Recommender.SLIM_BPR_Recommender(URM_train)
+            recommender.fit(epochs=10,learning_rate=0.001)
         break
 
     except (ValueError, IndexError):
