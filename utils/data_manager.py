@@ -7,6 +7,7 @@
 
 import scipy.sparse as sps
 import numpy as np
+import matplotlib.pyplot as pyplot
 
 dataset_dir = "dataset/"
 
@@ -300,3 +301,12 @@ def get_is_relevant(recommended_items, relevant_items):
     is_relevant = np.in1d(recommended_items, relevant_items, assume_unique=True) # compare elements in both arrays
 
     return is_relevant
+
+
+
+def plot_data(data, marker, title, y_label, x_label):
+    pyplot.plot(data, marker)
+    pyplot.title(title)
+    pyplot.ylabel(y_label)
+    pyplot.xlabel(x_label)
+    pyplot.show()

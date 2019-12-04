@@ -15,15 +15,13 @@ from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommen
 
 URM = data_manager.build_URM()
 
-
-URM_train_warm = data_manager.get_warm_users_URM(URM)
-URM_train_cold = data_manager.get_cold_users_URM(URM)
-
-
-URM = URM_train_warm
+# todo: deal with both cold items and cold users
+# URM_train_warm = data_manager.get_warm_users_URM(URM)
+# URM_train_cold = data_manager.get_cold_users_URM(URM)
+# URM = URM_train_warm
 
 # Tricks:
-# todo: deal with both cold items and cold users
+
 # todo: remove popular items from the training data.
 # (This is appropriate in cases where users can discover these items on their own,
 # and may not find these recommendations useful)
@@ -38,11 +36,11 @@ use_validation_set = False
 k_out_value = 1  # Leave One Out (keep 1 interaction/user)
 leave_random_out = True
 
-# splitted_data = data_splitter.split_train_leave_k_out_user_wise(URM, k_out=k_out_value,
-#                                                            use_validation_set=use_validation_set,
-#                                                            leave_random_out=leave_random_out)
+splitted_data = data_splitter.split_train_leave_k_out_user_wise(URM, k_out=k_out_value,
+                                                           use_validation_set=use_validation_set,
+                                                           leave_random_out=leave_random_out)
 
-splitted_data = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
+# splitted_data = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
 
 
 if use_validation_set:
@@ -64,7 +62,7 @@ assert data_splitter.assert_disjoint_matrices(list(SPLIT_URM_DICT.values()))
 data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 
 
-data_manager.perc_user_no_item_train(URM_train)
+# data_manager.perc_user_no_item_train(URM_train)
 
 
 
@@ -92,18 +90,44 @@ while True:
             recommender = TopPopRecommender.TopPopRecommender()
             recommender.fit(URM_train)
 
+
+        # Collaborative filtering
         elif recomm_type == 'UserCFKNNRecommender':
-            topK = 50
-            shrink = 100
+            # recommender = UserCFKNNRecommender.UserCFKNNRecommender(URM_train)
+
+            # MAP_per_k = []
+            # for topK in [50, 100, 200]:
+            #     print("topK = ", topK)
+            #     for shrink in [10, 50, 100]:
+            #         print("shrink = ", shrink)
+            #
+            #         recommender.fit(shrink=shrink, topK=topK)
+            #         result_dict = eval.evaluate_algorithm(URM_test, recommender)
+            #         MAP_per_k.append(result_dict["MAP"])
+
+            topK = 200
+            shrink = 10
 
             recommender = UserCFKNNRecommender.UserCFKNNRecommender(URM_train)
             recommender.fit(topK=topK, shrink=shrink)
 
         elif recomm_type == 'ItemCFKNNRecommender':
-            topK = 50
-            shrink = 100
+            # recommender = ItemCFKNNRecommender.ItemCFKNNRecommender(URM_train)
 
+            # MAP_per_k = []
+            # for topK in [50, 100, 200]:
+            #     print("topK = ", topK)
+            #     for shrink in [10, 50, 100]:
+            #         print("shrink = ", shrink)
+            #
+            #         recommender.fit(shrink=shrink, topK=topK)
+            #         result_dict = eval.evaluate_algorithm(URM_test, recommender)
+            #         MAP_per_k.append(result_dict["MAP"])
+
+            topK = 100
+            shrink = 50
             recommender = ItemCFKNNRecommender.ItemCFKNNRecommender(URM_train)
+
             recommender.fit(topK=topK, shrink=shrink)
 
         break
