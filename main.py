@@ -8,7 +8,7 @@ from utils import data_manager
 from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 from utils import data_splitter
-from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender
+from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender, SLIM_BPR_Recommender
 
 # Build URM
 # ---------
@@ -16,11 +16,11 @@ from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommen
 URM = data_manager.build_URM()
 
 
-URM_train_warm = data_manager.get_warm_users_URM(URM)
-URM_train_cold = data_manager.get_cold_users_URM(URM)
+# URM_train_warm = data_manager.get_warm_users_URM(URM)
+# URM_train_cold = data_manager.get_cold_users_URM(URM)
 
 
-URM = URM_train_warm
+# URM = URM_train_warm
 
 # Tricks:
 # todo: deal with both cold items and cold users
@@ -71,7 +71,7 @@ data_manager.perc_user_no_item_train(URM_train)
 # Train model without left-out ratings)
 # ------------------------------------
 
-recommender_list = ['RandomRecommender', 'TopPopRecommender', 'UserCFKNNRecommender', 'ItemCFKNNRecommender']
+recommender_list = ['RandomRecommender', 'TopPopRecommender', 'UserCFKNNRecommender', 'ItemCFKNNRecommender', 'SLIM_BPR_Recommender']
 
 print('Recommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -106,6 +106,10 @@ while True:
             recommender = ItemCFKNNRecommender.ItemCFKNNRecommender(URM_train)
             recommender.fit(topK=topK, shrink=shrink)
 
+        elif recomm_type == 'SLIM_BPR_Recommender':
+            # Train and test model
+            recommender = SLIM_BPR_Recommender.SLIM_BPR_Recommender(URM_train)
+            recommender.fit(epochs=10,learning_rate=0.001)
         break
 
     except (ValueError, IndexError):
