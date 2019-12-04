@@ -20,13 +20,12 @@ URM = data_manager.build_URM()
 # URM_train_cold = data_manager.get_cold_users_URM(URM)
 # URM = URM_train_warm
 
-# Tricks:
-
-# todo: remove popular items from the training data.
-# (This is appropriate in cases where users can discover these items on their own,
-# and may not find these recommendations useful)
-
 data_manager.get_statistics_URM(URM)
+
+# Remove 10% top popular items from the training data
+data_manager.top_10_percept_popular_items(URM)
+
+exit(0)
 
 
 # Train/test splitting
@@ -61,7 +60,7 @@ assert data_splitter.assert_disjoint_matrices(list(SPLIT_URM_DICT.values()))
 
 data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 
-
+# % Cold users
 # data_manager.perc_user_no_item_train(URM_train)
 
 

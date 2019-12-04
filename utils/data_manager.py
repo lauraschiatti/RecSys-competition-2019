@@ -7,7 +7,6 @@
 
 import scipy.sparse as sps
 import numpy as np
-import matplotlib.pyplot as pyplot
 
 dataset_dir = "dataset/"
 
@@ -257,24 +256,41 @@ def csr_sparse_matrix(data, row, col, shape=None):
     return csr_matrix
 
 
+# Remove 10% top popular items from the training data
+# ---------------------------------------------------
 
-# Get test set relevant items for a given user
-def get_relevant_items(user_id, URM_test):
-    relevant_items = URM_test[user_id].indices
+def top_10_percept_popular_items(URM):
 
-    return relevant_items
+    # This is appropriate in cases where users can discover these items on their own,
+    # and may not find these recommendations useful
 
-# Check whether recommended items are relevant
-def get_is_relevant(recommended_items, relevant_items):
-    is_relevant = np.in1d(recommended_items, relevant_items, assume_unique=True) # compare elements in both arrays
+    print("\n ... Item popularity ... ")
 
-    return is_relevant
+    item_popularity = (URM > 0).sum(axis=0)
+    item_popularity = np.array(item_popularity).squeeze()
+    item_popularity = np.sort(item_popularity) # sorted array
+
+    n_items = URM.shape[1]
+
+    ten_percent = int(n_items / 10)
+    ten_percent_popular_items = item_popularity[-ten_percent].mean()
+    print("Average per-item interactions for the top 10% popular items {:.2f}".
+          format(ten_percent_popular_items))
+
+    # Number of cold items
+    print("Number of items with zero interactions (cold items) {}".
+          format(np.sum(item_popularity == 0)))
+
+    # Get top 10% popular items over all items
+    print("top 10% popular items over all items")
+    item_popularity = (URM > 0).sum(axis=0)
+    item_popularity = np.array(item_popularity).squeeze()
+
+    # We are not interested in sorting the popularity value,
+    # but to order the items according to it
+    popular_items = np.argsort(item_popularity) # sorted array indices
+    popular_items = np.flip(popular_items, axis=0) # reverse order of elements along the given axis
+
+    print("popular items", popular_items[0:int(ten_percent_popular_items)])
 
 
-
-def plot_data(data, marker, title, y_label, x_label):
-    pyplot.plot(data, marker)
-    pyplot.title(title)
-    pyplot.ylabel(y_label)
-    pyplot.xlabel(x_label)
-    pyplot.show()
