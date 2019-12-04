@@ -27,7 +27,9 @@ n_users = 0
 n_items = 0
 
 # warm items and users arrays
+warm_users_mask = []
 warm_users = []
+warm_items_mask = []
 warm_items = []
 
 # -------------------------------------------
@@ -168,8 +170,8 @@ def buildICM():
 #         print("\n")
 
 
-def remove_cold_items_URM(URM):
-    global warm_items
+def get_warm_items_URM(URM):
+    global warm_items_mask, warm_items
     warm_items_mask = np.ediff1d(URM.tocsc().indptr) > 0
     warm_items = np.arange(URM.shape[1])[warm_items_mask]
 
@@ -177,12 +179,20 @@ def remove_cold_items_URM(URM):
 
     return URM_all
 
-def remove_cold_users_URM(URM):
-    global warm_users
+def get_warm_users_URM(URM):
+    global warm_users_mask, warm_users
     warm_users_mask = np.ediff1d(URM.tocsr().indptr) > 0
     warm_users = np.arange(URM.shape[0])[warm_users_mask]
 
     URM_all = URM[warm_users, :]
+    return URM_all
+
+def get_cold_users_URM(URM):
+    global warm_users_mask
+    cold_users_mask = np.logical_not(warm_users_mask)
+    cold_users = np.arange(URM.shape[0])[cold_users_mask]
+
+    URM_all = URM[cold_users, :]
     return URM_all
 
 def compute_density(URM):

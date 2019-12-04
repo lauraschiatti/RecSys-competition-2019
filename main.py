@@ -16,8 +16,11 @@ from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommen
 URM = data_manager.build_URM()
 
 
-URM = data_manager.remove_cold_items_URM(URM)
-URM = data_manager.remove_cold_users_URM(URM)
+URM_train_warm = data_manager.get_warm_users_URM(URM)
+URM_train_cold = data_manager.get_cold_users_URM(URM)
+
+
+URM = URM_train_warm
 
 # Tricks:
 # todo: deal with both cold items and cold users
@@ -53,12 +56,16 @@ SPLIT_URM_DICT = {
     "URM_test": URM_test,
 }
 
+#URM = data_manager.remove_cold_items_URM(URM)
+#URM = data_manager.get_warm_users_URM(URM)
+
 assert data_splitter.assert_disjoint_matrices(list(SPLIT_URM_DICT.values()))
 
 data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 
 
 data_manager.perc_user_no_item_train(URM_train)
+
 
 
 # Train model without left-out ratings)

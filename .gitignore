@@ -8,4 +8,5 @@
 __pycache__
 *.pyc
 
-# todo: ignore submissions dir?
+# Ignore submissions
+/submissions/
