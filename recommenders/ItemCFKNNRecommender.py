@@ -30,13 +30,13 @@ class ItemCFKNNRecommender(object):
             scores = self.filter_seen(user_id, scores)
 
         # rank items
-        ranking = scores.argsort()[::-1]
+        ranking = scores.argsort()[::-1] # numpy.ndarray
 
         if exclude_popular:
             recommended_items = self.filter_popular(ranking)
             # print("user_id {} \n".format(user_id))
-            # print(recommended_items)
-            return recommended_items
+            # print("recommended_items", recommended_items)
+            return np.array(recommended_items) # list to numpy.ndarray
 
         else:
             return ranking[:at]
