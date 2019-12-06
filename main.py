@@ -22,11 +22,9 @@ URM = data_manager.build_URM()
 
 data_manager.get_statistics_URM(URM)
 
-# Remove 10% top popular items from the training data
-data_manager.top_10_percept_popular_items(URM)
-
-exit(0)
-
+# Get 5% top popular items from the training data
+five_perc_pop = data_manager.top_5_percept_popular_items(URM)
+print("five_perc_pop", five_perc_pop, end='\n')
 
 # Train/test splitting
 # --------------------
@@ -35,11 +33,11 @@ use_validation_set = False
 k_out_value = 1  # Leave One Out (keep 1 interaction/user)
 leave_random_out = True
 
-splitted_data = data_splitter.split_train_leave_k_out_user_wise(URM, k_out=k_out_value,
-                                                           use_validation_set=use_validation_set,
-                                                           leave_random_out=leave_random_out)
-
-# splitted_data = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
+# splitted_data = data_splitter.split_train_leave_k_out_user_wise(URM, k_out=k_out_value,
+#                                                            use_validation_set=use_validation_set,
+#                                                            leave_random_out=leave_random_out)
+#
+splitted_data = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
 
 
 if use_validation_set:

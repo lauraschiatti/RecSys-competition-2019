@@ -256,33 +256,31 @@ def csr_sparse_matrix(data, row, col, shape=None):
     return csr_matrix
 
 
-# Remove 10% top popular items from the training data
+# Get top 10% popular items from the training data
+# over all items
 # ---------------------------------------------------
 
-def top_10_percept_popular_items(URM):
+def top_5_percept_popular_items(URM):
 
     # This is appropriate in cases where users can discover these items on their own,
     # and may not find these recommendations useful
 
-    print("\n ... Item popularity ... ")
-
+    # print("\n ... Item popularity ... ")4
     item_popularity = (URM > 0).sum(axis=0)
     item_popularity = np.array(item_popularity).squeeze()
-    item_popularity = np.sort(item_popularity) # sorted array
+    item_popularity = np.sort(item_popularity)  # sorted array
 
     n_items = URM.shape[1]
 
-    ten_percent = int(n_items / 10)
+    ten_percent = int(n_items / 5)
     ten_percent_popular_items = item_popularity[-ten_percent].mean()
-    print("Average per-item interactions for the top 10% popular items {:.2f}".
-          format(ten_percent_popular_items))
+    # print("Average per-item interactions for the top 10% popular items {:.2f}".
+    #       format(ten_percent_popular_items))
 
     # Number of cold items
-    print("Number of items with zero interactions (cold items) {}".
-          format(np.sum(item_popularity == 0)))
+    # print("Number of items with zero interactions (cold items) {}".
+    #       format(np.sum(item_popularity == 0)))
 
-    # Get top 10% popular items over all items
-    print("top 10% popular items over all items")
     item_popularity = (URM > 0).sum(axis=0)
     item_popularity = np.array(item_popularity).squeeze()
 
@@ -291,6 +289,8 @@ def top_10_percept_popular_items(URM):
     popular_items = np.argsort(item_popularity) # sorted array indices
     popular_items = np.flip(popular_items, axis=0) # reverse order of elements along the given axis
 
-    print("popular items", popular_items[0:int(ten_percent_popular_items)])
+    ten_perc_pop = popular_items[0:int(ten_percent_popular_items)]
+
+    return ten_perc_pop
 
 
