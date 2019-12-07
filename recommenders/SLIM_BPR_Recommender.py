@@ -5,16 +5,17 @@ import numpy as np
 import time
 
 from utils import masks, compute_similarity
+from utils.data_manager import top_5_percept_popular_items
 
 
 # SLIM with BPR
 class SLIM_BPR_Recommender(object):
     """ SLIM_BPR recommender with cosine similarity and no shrinkage"""
 
-    def __init__(self, URM_train):
-        self.URM_train = URM_train
+    def __init__(self, URM):
+        self.URM = URM
 
-        self.URM_mask = masks.get_warm_users_URM(self.URM_train)
+        self.URM_mask = masks.get_warm_users_URM(self.URM)
 
         self.n_users, self.n_items = self.URM_mask.shape
 
@@ -129,9 +130,9 @@ class SLIM_BPR_Recommender(object):
 
         self.similarity_matrix = compute_similarity.similarityMatrixTopK(self.similarity_matrix, k=100)
 
-    def recommend(self, user_id, at=None, exclude_seen=True):
+    def recommend(self, user_id, at=None, exclude_seen=True, exclude_popular=False):
         # compute the scores using the dot product
-        user_profile = self.URM_train[user_id]
+        user_profile = self.URM[user_id]
         scores = user_profile.dot(self.similarity_matrix).toarray().ravel()
 
         if exclude_seen:
@@ -140,17 +141,39 @@ class SLIM_BPR_Recommender(object):
         # rank items
         ranking = scores.argsort()[::-1]
 
-        return ranking[:at]
+        if exclude_popular:
+            recommended_items = self.filter_popular(ranking)
+            return np.array(recommended_items) # list to np.array
+
+        else:
+            return ranking[:at]
 
     def filter_seen(self, user_id, scores):
 
-        start_pos = self.URM_train.indptr[user_id]
-        end_pos = self.URM_train.indptr[user_id + 1]
+        start_pos = self.URM.indptr[user_id]
+        end_pos = self.URM.indptr[user_id + 1]
 
-        user_profile = self.URM_train.indices[start_pos:end_pos]
+        user_profile = self.URM.indices[start_pos:end_pos]
 
         scores[user_profile] = -np.inf
 
         return scores
 
-# todo: check ../master/SLIM_BPR/SLIM_BPR.py
+    # Do not recommend 5% top popular items.
+    def filter_popular(self, ranking, at=10):
+        # get 5 % top popular items
+        five_perc_pop = top_5_percept_popular_items(self.URM)
+
+        i = 0
+        recommended_items = []
+
+        # Return 10 non-popular items to recommend
+        while len(recommended_items) < at:
+
+            # if the item in the ranking is not popular
+            if ranking[i] not in five_perc_pop:
+                # append to items to be recommended
+                recommended_items.append(ranking[i])
+            i += 1
+
+        return recommended_items

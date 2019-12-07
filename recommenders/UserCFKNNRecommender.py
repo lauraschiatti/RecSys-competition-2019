@@ -4,6 +4,7 @@
 import numpy as np
 
 import utils.compute_similarity as cs
+from utils.data_manager import top_5_percept_popular_items
 
 class UserCFKNNRecommender(object):
 
@@ -18,7 +19,7 @@ class UserCFKNNRecommender(object):
         self.W_sparse = similarity_object.compute_similarity()
 
 
-    def recommend(self, user_id, at=10, exclude_seen=True):
+    def recommend(self, user_id, at=10, exclude_seen=True, exclude_popular=False):
         # compute the scores using the dot product
 
         scores = self.W_sparse[user_id, :].dot(self.URM).toarray().ravel()
@@ -29,7 +30,12 @@ class UserCFKNNRecommender(object):
         # rank items
         ranking = scores.argsort()[::-1]
 
-        return ranking[:at]
+        if exclude_popular:
+            recommended_items = self.filter_popular(ranking)
+            return np.array(recommended_items) # list to np.array
+
+        else:
+            return ranking[:at]
 
     def filter_seen(self, user_id, scores):
         start_pos = self.URM.indptr[user_id]
@@ -40,3 +46,23 @@ class UserCFKNNRecommender(object):
         scores[user_profile] = -np.inf
 
         return scores
+
+        # Do not recommend popular items.
+
+    def filter_popular(self, ranking, at=10):
+        # get 5 % top popular items
+        five_perc_pop = top_5_percept_popular_items(self.URM)
+
+        i = 0
+        recommended_items = []
+
+        # Return 10 non-popular items to recommend
+        while len(recommended_items) < at:
+
+            # if the item in the ranking is not popular
+            if ranking[i] not in five_perc_pop:
+                # append to items to be recommended
+                recommended_items.append(ranking[i])
+            i += 1
+
+        return recommended_items

@@ -34,9 +34,7 @@ class ItemCFKNNRecommender(object):
 
         if exclude_popular:
             recommended_items = self.filter_popular(ranking)
-            # print("user_id {} \n".format(user_id))
-            # print("recommended_items", recommended_items)
-            return np.array(recommended_items) # list to numpy.ndarray
+            return np.array(recommended_items) # list to np.array
 
         else:
             return ranking[:at]
@@ -53,7 +51,7 @@ class ItemCFKNNRecommender(object):
 
         return scores
 
-    # Do not recommend popular items.
+    # Do not recommend 5% top popular items.
     def filter_popular(self, ranking, at=10):
         # get 5 % top popular items
         five_perc_pop = top_5_percept_popular_items(self.URM)
