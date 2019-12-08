@@ -132,19 +132,80 @@ def build_ICM():
     # Convert values to list# Create lists of all users, items and contents (ratings)
     item_list_icm = list(item_list)
     class_list_icm = list(class_list)
-    col_list_icm = list(col_list)
-
-    #print(item_list_icm[0:10])
-    #print(class_list_icm[0:10])
+    col_list_icm = np.zeros(len(col_list))
 
     #Number of items that are in the subclass list
-    print(max(item_list_icm) + 1)
+    num_items = max(item_list_icm) + 1
 
-    ICM_shape = (n_subclass, 4)
+    ICM_shape = (num_items, 1)
 
-    ICM_all = csr_sparse_matrix(class_list_icm,item_list_icm,col_list_icm,shape=ICM_shape)
+    ICM_subclass = csr_sparse_matrix(class_list_icm,item_list_icm,col_list_icm,shape=ICM_shape)
 
-    print(ICM_all[0,:])
+    print("\n ... Loading price data ... ", end="\n")
+
+    matrix_tuples = []
+
+    n_prices = 0
+
+    with open(data_ICM_price, 'r') as file:  # read file's content
+        next(file)  # skip header row
+        for line in file:
+            n_prices += 1
+
+            # Create a tuple for each interaction (line in the file)
+            matrix_tuples.append(row_split(line))
+
+    # Separate user_id, item_id and rating
+    item_list, col_list, price_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
+
+    # Convert values to list# Create lists of all users, items and contents (ratings)
+    item_list_icm = list(item_list)
+    col_list_icm = list(col_list)
+    price_list_icm = list(price_list)
+
+    ICM_price = csr_sparse_matrix(price_list_icm, item_list_icm, col_list_icm)
+
+    # Load asset data
+    print("\n ... Loading asset data ... ", end="\n")
+
+    matrix_tuples = []
+
+    n_assets = 0
+
+    with open(data_ICM_asset, 'r') as file:  # read file's content
+        next(file)  # skip header row
+        for line in file:
+            n_assets += 1
+
+            # Create a tuple for each interaction (line in the file)
+            matrix_tuples.append(row_split(line))
+
+    # Separate user_id, item_id and rating
+    item_list, col_list, asset_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
+
+    # Convert values to list# Create lists of all users, items and contents (ratings)
+    item_list_icm = list(item_list)
+    col_list_icm = list(col_list)
+    asset_list_icm = list(asset_list)
+
+    ICM_asset = csr_sparse_matrix(asset_list_icm, item_list_icm, col_list_icm)
+
+
+    ICM_all = sps.hstack([ICM_price,ICM_asset,ICM_subclass], format='csr')
+
+    ICM_all = sps.csr_matrix(ICM_all)
+    features_per_item = np.ediff1d(ICM_all.indptr)
+
+    ICM_all = sps.csc_matrix(ICM_all)
+    items_per_feature = np.ediff1d(ICM_all.indptr)
+
+    ICM_all = sps.csr_matrix(ICM_all)
+
+    # for x in range(3):
+    #     print(ICM_all[0,x])
+    #
+    # print(features_per_item.shape)
+    # print(items_per_feature.shape)
 
 
 # def get_statistics_ICM(self):
