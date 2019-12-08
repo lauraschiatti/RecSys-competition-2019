@@ -63,6 +63,7 @@ data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 # data_manager.perc_user_no_item_train(URM_train)
 
 
+data_manager.build_ICM()
 
 # Train model without left-out ratings)
 # ------------------------------------

@@ -25,6 +25,7 @@ item_list = []
 n_interactions = 0
 n_users = 0
 n_items = 0
+n_subclass = 0
 
 # -------------------------------------------
 # User Rating Matrix from training data
@@ -108,40 +109,43 @@ def get_statistics_splitted_URM(SPLIT_URM_DICT):
 # Build Item Content Matrix with three features: asset, price and sub-class
 # -------------------------------------------------------------------------
 
-def buildICM():
+
+def build_ICM():
     # features = [‘asset’, ’price’, ’subclass’] info about products
-    global user_list, item_list, n_interactions
-#
-#     print("\n ... Loading train data ... ", end="\n")
-#
-#     matrix_tuples = []
-#
-#     with open(data_train, 'r') as file:  # read file's content
-#         next(file)  # skip header row
-#         for line in file:
-#             n_interactions += 1
-#
-#             # Create a tuple for each interaction (line in the file)
-#             matrix_tuples.append(row_split(line))
-#
-#     # Separate user_id, item_id and rating
-#     user_list, item_list, rating_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
-#
-#     # Convert values to list# Create lists of all users, items and contents (ratings)
-#     user_list = list(user_list)
-#     item_list = list(item_list)
-#     content_list = list(content_list)
-#     timestamp_list = list(timestamp_list)
-#
-#     return user_list, item_list, content_list, timestamp_list
-#
-#     n_items = URM.shape[1]
-#     n_tags = max(tag_list_ICM) + 1
-#     ICM_shape = (n_items, n_tags)
-#
-#     ones = np.ones(len(tag_list_ICM))
-#
-#     ICM = data.csr_sparse_matrix(ones, item_list_ICM, tag_list_ICM, ICM_shape)
+    global n_subclass
+
+    print("\n ... Loading subclass data ... ", end="\n")
+
+    matrix_tuples = []
+
+    with open(data_ICM_sub_class, 'r') as file:  # read file's content
+        next(file)  # skip header row
+        for line in file:
+            n_subclass += 1
+
+            # Create a tuple for each interaction (line in the file)
+            matrix_tuples.append(row_split(line))
+
+    # Separate user_id, item_id and rating
+    item_list, class_list, col_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
+
+    # Convert values to list# Create lists of all users, items and contents (ratings)
+    item_list_icm = list(item_list)
+    class_list_icm = list(class_list)
+    col_list_icm = list(col_list)
+
+    #print(item_list_icm[0:10])
+    #print(class_list_icm[0:10])
+
+    #Number of items that are in the subclass list
+    print(max(item_list_icm) + 1)
+
+    ICM_shape = (n_subclass, 4)
+
+    ICM_all = csr_sparse_matrix(class_list_icm,item_list_icm,col_list_icm,shape=ICM_shape)
+
+    print(ICM_all[0,:])
+
 
 # def get_statistics_ICM(self):
 #
