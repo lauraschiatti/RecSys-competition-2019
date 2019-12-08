@@ -106,28 +106,17 @@ class SLIM_BPR_Recommender(object):
         x_j = self.similarity_matrix[neg_item_id, user_seen_items].sum()
 
         # Gradient
-        x_uij = x_i - x_j
+        x_uij = x_i - x_j # prediction
 
         gradient = expit(-x_uij) # expit(x) = 1/(1+exp(-x))
 
-
-        # Update similarities for all items except those sampled
+        # Update similarities for all items
 
         # For positive item is PLUS logistic minus lambda*S
-        # if (pos_item_id != user_seen_item):
-        #     update = gradient - self.lambda_i * self.similarity_matrix[pos_item_id, user_seen_items]
-        #     self.similarity_matrix[pos_item_id, user_seen_item] += self.learning_rate * update
-        #
-        # # For positive item is MINUS logistic minus lambda*S
-        # if (neg_item_id != user_seen_item):
-        #     update = - gradient - self.lambda_j * self.similarity_matrix[neg_item_id, user_seen_items]
-        #     self.similarity_matrix[neg_item_id, user_seen_item] += self.learning_rate * update
-
-        # Update
-
         self.similarity_matrix[pos_item_id, user_seen_items] += self.learning_rate * gradient
         self.similarity_matrix[pos_item_id, pos_item_id] = 0
 
+        # For positive item is MINUS logistic minus lambda*S
         self.similarity_matrix[neg_item_id, user_seen_items] -= self.learning_rate * gradient
         self.similarity_matrix[neg_item_id, neg_item_id] = 0
 

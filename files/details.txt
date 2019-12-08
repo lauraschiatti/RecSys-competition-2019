@@ -70,6 +70,12 @@ ______________|_______________|__________________
 
    item_id       feature_id     value of the cell
 
+    asset       |     prize       |       subclass
+________________|_________________|__________________
+
+  value of the cell
+
+
 ###### data_ICM_price.csv ######  price of each item (already normalized)
 
 

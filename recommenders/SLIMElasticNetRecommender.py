@@ -8,29 +8,21 @@ import time, sys
 
 class SLIMElasticNetRecommender(object):
     """
-    Train a Sparse Linear Methods (SLIM) item similarity model.
-    NOTE: ElasticNet solver is parallel, a single intance of SLIM_ElasticNet will
-          make use of half the cores available
+        Train a Sparse Linear Methods (SLIM) item similarity model.
 
-    See:
-        Efficient Top-N Recommendation by Linear Regression,
-        M. Levy and K. Jack, LSRS workshop at RecSys 2013.
-        https://www.slideshare.net/MarkLevy/efficient-slides
+        NOTE: ElasticNet optimizes prediction error and l1, l2 norms over the similarity matrix
+                to ensure sparsity and counter overfitting
 
-        SLIM: Sparse linear methods for top-n recommender systems,
-        X. Ning and G. Karypis, ICDM 2011.
-        http://glaros.dtc.umn.edu/gkhome/fetch/papers/SLIM2011icdm.pdf
+        Learn every item similarity column independently, in such a way that those similarities
+        will allow the model to predict the interaction score (rating) for that item using
+        all other item iteractions.
     """
 
-    RECOMMENDER_NAME = "SLIMElasticNetRecommender"
-
     def __init__(self, URM_train):
-
-        super(SLIMElasticNetRecommender, self).__init__()
-
         self.URM_train = URM_train
 
-    def fit(self, l1_penalty=0.1, l2_penalty=0.1, positive_only=True, topK=100):
+
+    def fit(self, l1_penalty=0.001, l2_penalty=0.001, positive_only=True, topK=100):
 
         self.l1_penalty = l1_penalty
         self.l2_penalty = l2_penalty
@@ -44,6 +36,7 @@ class SLIMElasticNetRecommender(object):
             self.l1_ratio = 1.0
 
         # initialize the ElasticNet model
+        learning_rate =1e-3
         self.model = ElasticNet(alpha=1.0,
                                 l1_ratio=self.l1_ratio,
                                 positive=self.positive_only,
@@ -52,7 +45,7 @@ class SLIMElasticNetRecommender(object):
                                 precompute=True,
                                 selection='random',
                                 max_iter=100,
-                                tol=1e-4)
+                                tol=learning_rate) # tolerance for the optimization
 
         URM_train = sps.csc_matrix(self.URM_train)
 
