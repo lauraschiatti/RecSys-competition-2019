@@ -8,7 +8,8 @@ from utils import data_manager
 from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 from utils import data_splitter
-from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender, SLIM_BPR_Recommender,SLIMElasticNetRecommender
+from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender, \
+    SLIM_BPR_Recommender,SLIMElasticNetRecommender
 
 # Build URM
 # ---------
@@ -136,11 +137,15 @@ while True:
         elif recomm_type == 'SLIM_BPR_Recommender':
             # Train and test model
             recommender = SLIM_BPR_Recommender.SLIM_BPR_Recommender(URM_train)
-            recommender.fit(epochs=10,learning_rate=0.001)
+            recommender.fit()
+
+
         elif recomm_type == 'SLIMElasticNetRecommender':
             # Train and test model
             recommender = SLIMElasticNetRecommender.SLIMElasticNetRecommender(URM_train)
             recommender.fit()
+
+
         break
 
     except (ValueError, IndexError):

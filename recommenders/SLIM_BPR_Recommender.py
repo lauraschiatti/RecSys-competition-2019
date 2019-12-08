@@ -14,123 +14,183 @@ class SLIM_BPR_Recommender(object):
 
     def __init__(self, URM):
         self.URM = URM
+        # self.URM_mask = masks.get_warm_users_URM(self.URM)
 
-        self.URM_mask = masks.get_warm_users_URM(self.URM)
-
-        self.n_users, self.n_items = self.URM_mask.shape
+        self.n_users, self.n_items = self.URM.shape
 
         # Initialize model: in the case of SLIM it works best to initialize S as zero
         self.similarity_matrix = np.zeros((self.n_items, self.n_items))
 
-        # Initialize similarity with random values and zero-out diagonal
-        # self.S = np.random.random((self.n_items, self.n_items)).astype('float32')
-        # self.S[np.arange(self.n_items), np.arange(self.n_items)] = 0
-
-        # Eligible users: users having at least one interaction
+        # eligible users: users having at least one interaction
         self.eligible_users = []
 
         for user_id in range(self.n_users):
 
-            start_pos = self.URM_mask.indptr[user_id]
-            end_pos = self.URM_mask.indptr[user_id + 1]
+            start_pos = self.URM.indptr[user_id]
+            end_pos = self.URM.indptr[user_id + 1]
 
-            if len(self.URM_mask.indices[start_pos:end_pos]) > 0:
+            if len(self.URM.indices[start_pos:end_pos]) > 0:
                 self.eligible_users.append(user_id)
 
-    # Randomly sample the triplets (user, positive_item, negative_item)
+
     def sample_triplet(self):
 
-        # By randomly selecting a user in this way we could end up
-        # with a user with no interactions
-        # user_id = np.random.randint(0, n_users)
+        """
+            Randomly samples a user and then samples randomly a seen and not seen item
+            :return: user_id, pos_item_id, neg_item_id
+        """
 
-        user_id = np.random.choice(self.eligible_users)
-
-        # Get user seen items and choose one
-        user_seen_items = self.URM_mask[user_id, :].indices
-        pos_item_id = np.random.choice(user_seen_items)
-
-        negItemSelected = False
-
-        # It's faster to just try again then to build a mapping of the non-seen items
-        while (not negItemSelected):
-            neg_item_id = np.random.randint(0, self.n_items)
-
-            if (neg_item_id not in user_seen_items):
-                negItemSelected = True
+        user_id = self.sample_user()
+        pos_item_id, neg_item_id = self.sample_item_pair(user_id)
 
         return user_id, pos_item_id, neg_item_id
+
+
+    def sample_user(self):
+        """
+        Sample a user that has viewed at least one and not all items
+        :return: user_id
+        """
+
+        while (True):
+            # By randomly selecting a user in this way we could end up
+            # with a user with no interactions
+            # user_id = np.random.randint(0, self.n_users)
+
+            user_id = np.random.choice(self.eligible_users)
+
+            num_seen_items = self.URM[user_id].nnz
+
+            if (num_seen_items > 0 and num_seen_items < self.n_items):
+                return user_id
+
+
+    def sample_item_pair(self, user_id):
+        """
+        Returns for the given user a random seen item and a random not seen item
+        :param user_id:
+        :return: pos_item_id, neg_item_id
+        """
+
+        # Get user seen items and choose one
+        user_seen_items = self.URM[user_id].indices
+        pos_item_id = user_seen_items[np.random.randint(0,len(user_seen_items))]
+
+        # user_seen_items = self.URM[user_id, :].indices
+        # pos_item_id = np.random.choice(user_seen_items)
+
+        while(True):
+            neg_item_id = np.random.randint(0, self.n_items)
+
+            if(neg_item_id not in user_seen_items):
+                return pos_item_id, neg_item_id
+
+            # negItemSelected = False
+            #
+            # # It's faster to just try again then to build a mapping of the non-seen items
+            # while (not negItemSelected):
+            #     neg_item_id = np.random.randint(0, self.n_items)
+            #
+            #     if (neg_item_id not in user_seen_items):
+            #         negItemSelected = True
+
+
+    def update_factors(self, user_id, pos_item_id, neg_item_id):
+
+        from scipy.special import expit
+
+        user_seen_items = self.URM[user_id, :].indices
+
+        # Calculate current predicted score
+        x_i = self.similarity_matrix[pos_item_id, user_seen_items].sum()
+        x_j = self.similarity_matrix[neg_item_id, user_seen_items].sum()
+
+        # Gradient
+        x_uij = x_i - x_j
+
+        gradient = expit(-x_uij) # expit(x) = 1/(1+exp(-x))
+
+
+        # Update similarities for all items except those sampled
+
+        # For positive item is PLUS logistic minus lambda*S
+        # if (pos_item_id != user_seen_item):
+        #     update = gradient - self.lambda_i * self.similarity_matrix[pos_item_id, user_seen_items]
+        #     self.similarity_matrix[pos_item_id, user_seen_item] += self.learning_rate * update
+        #
+        # # For positive item is MINUS logistic minus lambda*S
+        # if (neg_item_id != user_seen_item):
+        #     update = - gradient - self.lambda_j * self.similarity_matrix[neg_item_id, user_seen_items]
+        #     self.similarity_matrix[neg_item_id, user_seen_item] += self.learning_rate * update
+
+        # Update
+
+        self.similarity_matrix[pos_item_id, user_seen_items] += self.learning_rate * gradient
+        self.similarity_matrix[pos_item_id, pos_item_id] = 0
+
+        self.similarity_matrix[neg_item_id, user_seen_items] -= self.learning_rate * gradient
+        self.similarity_matrix[neg_item_id, neg_item_id] = 0
+
+
 
     def epoch_iteration(self):
 
         # Get number of available interactions
-        numPositiveIteractions = int(self.URM_mask.nnz * 0.01)
+        num_positive_interactions = int(self.URM.nnz * 0.01)
 
         start_time_epoch = time.time()
         start_time_batch = time.time()
 
         # Uniform user sampling without replacement
-        for num_sample in range(numPositiveIteractions):
+        for num_sample in range(num_positive_interactions):
 
-            # Sample triplets (user, positive_item, negative_item)
-            # ---------------
+            # sample triplets
+            user_id, pos_item_id, neg_item_id = self.sample_triplet()
 
-            user_id, positive_item_id, negative_item_id = self.sample_triplet()
+            # compute predictions, gradient and update model
+            self.update_factors(user_id, pos_item_id, neg_item_id)
 
-            user_seen_items = self.URM_mask[user_id, :].indices
 
-            # Prediction
-            # ----------
-
-            x_i = self.similarity_matrix[positive_item_id, user_seen_items].sum()
-            x_j = self.similarity_matrix[negative_item_id, user_seen_items].sum()
-
-            # Gradient: depends on the objective function: RMSE, BPR
-            # ---------
-
-            x_ij = x_i - x_j
-
-            # The original BPR paper uses the logarithm of the sigmoid of x_ij, whose derivative is the following
-            gradient = 1 / (1 + np.exp(x_ij))
-
-            # Update model
-            # -------------
-
-            learning_rate = 1e-3
-
-            # In SLIM there's just one parameter to update, the similarity matrix
-            self.similarity_matrix[positive_item_id, user_seen_items] += learning_rate * gradient
-            self.similarity_matrix[positive_item_id, positive_item_id] = 0
-
-            self.similarity_matrix[negative_item_id, user_seen_items] -= learning_rate * gradient
-            self.similarity_matrix[negative_item_id, negative_item_id] = 0
-
-            if (time.time() - start_time_batch >= 30 or num_sample == numPositiveIteractions - 1):
+            if (time.time() - start_time_batch >= 30 or num_sample == num_positive_interactions - 1):
                 print("Processed {} ( {:.2f}% ) in {:.2f} seconds. Sample per second: {:.0f}".format(
                     num_sample,
-                    100.0 * float(num_sample) / numPositiveIteractions,
+                    100.0 * float(num_sample) / num_positive_interactions,
                     time.time() - start_time_batch,
                     float(num_sample) / (time.time() - start_time_epoch)))
 
                 start_time_batch = time.time()
 
-    def fit(self, learning_rate=0.01, epochs=10):
+
+    def fit(self, learning_rate=1e-4, epochs=15):
+        """
+            Train SLIM wit BPR. If the model was already trained, overwrites matrix S
+            :param epochs:
+            :return: -
+        """
 
         self.learning_rate = learning_rate
-        self.epochs = epochs
 
-        for current_epoch in range(self.epochs):
+        start_time_train = time.time()
+
+        for current_epoch in range(epochs):
             start_time_epoch = time.time()
 
             self.epoch_iteration()
             print("Epoch {} of {} complete in {:.2f} minutes".format(current_epoch + 1, epochs,
                                                                      float(time.time() - start_time_epoch) / 60))
 
+        print("Train completed in {:.2f} minutes".format(float(time.time() - start_time_train) / 60))
+
+        # The similarity matrix is learnt row-wise
+
+        # To be used in the product URM*S must be transposed to be column-wise
         self.similarity_matrix = self.similarity_matrix.T
 
-        self.similarity_matrix = compute_similarity.similarityMatrixTopK(self.similarity_matrix, k=100)
+        self.similarity_matrix = compute_similarity.similarityMatrixTopK(self.similarity_matrix, k = 100)
 
-    def recommend(self, user_id, at=None, exclude_seen=True, exclude_popular=False):
+
+    def recommend(self, user_id, at=None, exclude_seen=True, exclude_popular=True):
+
         # compute the scores using the dot product
         user_profile = self.URM[user_id]
         scores = user_profile.dot(self.similarity_matrix).toarray().ravel()
@@ -148,6 +208,7 @@ class SLIM_BPR_Recommender(object):
         else:
             return ranking[:at]
 
+
     def filter_seen(self, user_id, scores):
 
         start_pos = self.URM.indptr[user_id]
@@ -158,6 +219,7 @@ class SLIM_BPR_Recommender(object):
         scores[user_profile] = -np.inf
 
         return scores
+
 
     # Do not recommend 5% top popular items.
     def filter_popular(self, ranking, at=10):

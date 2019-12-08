@@ -135,6 +135,7 @@ class SLIMElasticNetRecommender(object):
         self.W_sparse = sps.csr_matrix((values[:numCells], (rows[:numCells], cols[:numCells])),
                                        shape=(n_items, n_items), dtype=np.float32)
 
+
     def recommend(self, user_id, at=None, exclude_seen=True):
         # compute the scores using the dot product
         user_profile = self.URM_train[user_id]
@@ -147,6 +148,7 @@ class SLIMElasticNetRecommender(object):
         ranking = scores.argsort()[::-1]
 
         return ranking[:at]
+
 
     def filter_seen(self, user_id, scores):
 
