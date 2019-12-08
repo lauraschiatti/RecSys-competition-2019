@@ -193,19 +193,16 @@ def build_ICM():
 
     ICM_all = sps.hstack([ICM_price,ICM_asset,ICM_subclass], format='csr')
 
-    ICM_all = sps.csr_matrix(ICM_all)
     features_per_item = np.ediff1d(ICM_all.indptr)
-
-    ICM_all = sps.csc_matrix(ICM_all)
     items_per_feature = np.ediff1d(ICM_all.indptr)
 
-    ICM_all = sps.csr_matrix(ICM_all)
+    for x in range(3):
+        print(ICM_all[0,x])
 
-    # for x in range(3):
-    #     print(ICM_all[0,x])
-    #
-    # print(features_per_item.shape)
-    # print(items_per_feature.shape)
+    print(features_per_item.shape)
+    print(items_per_feature.shape)
+
+    return ICM_all
 
 
 # def get_statistics_ICM(self):
@@ -357,5 +354,3 @@ def top_5_percept_popular_items(URM):
     ten_perc_pop = popular_items[0:int(ten_percent_popular_items)]
 
     return ten_perc_pop
-
-

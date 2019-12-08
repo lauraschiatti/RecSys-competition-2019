@@ -22,7 +22,7 @@ class SLIMElasticNetRecommender(object):
         self.URM_train = URM_train
 
 
-    def fit(self, l1_penalty=0.001, l2_penalty=0.001, positive_only=True, topK=100):
+    def fit(self, l1_penalty=0.01, l2_penalty=0.01, positive_only=True, topK=100):
 
         self.l1_penalty = l1_penalty
         self.l2_penalty = l2_penalty

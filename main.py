@@ -9,7 +9,7 @@ from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 from utils import data_splitter
 from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender, \
-    SLIM_BPR_Recommender,SLIMElasticNetRecommender
+    SLIM_BPR_Recommender,SLIMElasticNetRecommender, itemCBFKNNRecommender
 
 # Build URM
 # ---------
@@ -63,7 +63,8 @@ data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 # data_manager.perc_user_no_item_train(URM_train)
 
 
-data_manager.build_ICM()
+ICM = data_manager.build_ICM()
+
 
 # Train model without left-out ratings)
 # ------------------------------------
@@ -71,6 +72,7 @@ data_manager.build_ICM()
 recommender_list = [
     'RandomRecommender',
     'TopPopRecommender',
+    'ItemCBFKNNRecommender',
     'UserCFKNNRecommender',
     'ItemCFKNNRecommender',
     'SLIM_BPR_Recommender',
@@ -94,6 +96,15 @@ while True:
         elif recomm_type == 'TopPopRecommender':
             recommender = TopPopRecommender.TopPopRecommender()
             recommender.fit(URM_train)
+
+        # Content-based filtering
+        elif recomm_type == 'ItemCBFKNNRecommender':
+            # topK = 200
+            # shrink = 10
+
+
+            recommender = itemCBFKNNRecommender.ItemCBFKNNRecommender(URM_train, ICM)
+            recommender.fit()
 
 
         # Collaborative filtering
