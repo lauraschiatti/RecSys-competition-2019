@@ -1,31 +1,33 @@
 #!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 
-# import scipy.sparse as sps
-# import numpy as np
-
 from utils import data_manager
 from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 from utils import data_splitter
+from utils import masks
 from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender, \
-    SLIM_BPR_Recommender,SLIMElasticNetRecommender, itemCBFKNNRecommender
+    SLIM_BPR_Recommender,SLIMElasticNetRecommender, itemCBFKNNRecommender, PureSVDRecommender
+
 
 # Build URM
 # ---------
 
 URM = data_manager.build_URM()
 
-# todo: deal with both cold items and cold users
-# URM_train_warm = data_manager.get_warm_users_URM(URM)
-# URM_train_cold = data_manager.get_cold_users_URM(URM)
-# URM = URM_train_warm
-
 data_manager.get_statistics_URM(URM)
 
 # Get 5% top popular items from the training data
 five_perc_pop = data_manager.top_5_percept_popular_items(URM)
 print("five_perc_pop", five_perc_pop, end='\n')
+
+ICM = data_manager.build_ICM()
+
+# Cold items, cold users and cold features
+# ----------------------------------------
+
+# URM, ICM = masks.refactor_URM_ICM(URM, ICM)
+
 
 # Train/test splitting
 # --------------------
@@ -37,7 +39,7 @@ leave_random_out = True
 # splitted_data = data_splitter.split_train_leave_k_out_user_wise(URM, k_out=k_out_value,
 #                                                            use_validation_set=use_validation_set,
 #                                                            leave_random_out=leave_random_out)
-#
+
 splitted_data = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
 
 
@@ -52,18 +54,9 @@ SPLIT_URM_DICT = {
     "URM_test": URM_test,
 }
 
-#URM = data_manager.remove_cold_items_URM(URM)
-#URM = data_manager.get_warm_users_URM(URM)
-
 assert data_splitter.assert_disjoint_matrices(list(SPLIT_URM_DICT.values()))
 
 data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
-
-# % Cold users
-# data_manager.perc_user_no_item_train(URM_train)
-
-
-ICM = data_manager.build_ICM()
 
 
 # Train model without left-out ratings)
@@ -76,11 +69,16 @@ recommender_list = [
     'UserCFKNNRecommender',
     'ItemCFKNNRecommender',
     'SLIM_BPR_Recommender',
-    'SLIMElasticNetRecommender']
+    'SLIMElasticNetRecommender',
+    'PureSVDRecommender']
 
 print('Recommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
     print('{}. {}'.format(i, recomm_type))
+
+
+# Fit the model
+# -------------
 
 while True:
     try:
@@ -88,7 +86,6 @@ while True:
         recomm_type = recommender_list[selected-1]
         print('\n ... {} ... '.format(recomm_type))
 
-        # fit model
         if recomm_type == 'RandomRecommender':
             recommender = RandomRecommender.RandomRecommender()
             recommender.fit(URM_train)
@@ -101,7 +98,6 @@ while True:
         elif recomm_type == 'ItemCBFKNNRecommender':
             # topK = 200
             # shrink = 10
-
 
             recommender = itemCBFKNNRecommender.ItemCBFKNNRecommender(URM_train, ICM)
             recommender.fit()
@@ -146,17 +142,24 @@ while True:
 
             recommender.fit(topK=topK, shrink=shrink)
 
+        # SLIM
         elif recomm_type == 'SLIM_BPR_Recommender':
-            # Train and test model
             recommender = SLIM_BPR_Recommender.SLIM_BPR_Recommender(URM_train)
             recommender.fit()
 
 
         elif recomm_type == 'SLIMElasticNetRecommender':
-            # Train and test model
             recommender = SLIMElasticNetRecommender.SLIMElasticNetRecommender(URM_train)
             recommender.fit()
 
+        # Matrix Factorization
+        elif recomm_type == 'PureSVDRecommender':
+            recommender = PureSVDRecommender.PureSVDRecommender(URM_train)
+            recommender.fit()
+
+            # result_dict, _ = evaluator_test.evaluateRecommender(recommender)
+            #
+            # print("result_dict PureSVD", result_dict)
 
         break
 
@@ -167,7 +170,17 @@ while True:
 # Evaluate model on left-out ratings (URM_test)
 # ---------------------------------------------
 
-eval.evaluate_algorithm(URM_test, recommender)
+if recomm_type != 'PureSVDRecommender':
+    eval.evaluate_algorithm(URM_test, recommender)
+
+else:
+    from utils.Evaluation.Evaluator import EvaluatorHoldout
+
+    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
+    result_dict, _ = evaluator_test.evaluateRecommender(recommender)
+
+    print("result_dict PureSVDRecommender", result_dict)
+
 
 
 # Compute top-10 recommendations for each target user
@@ -196,4 +209,4 @@ if predictions == 'y':
 
     # save predictions on csv file
     create_csv.create_csv(top_10_items, recomm_type)
-#
+

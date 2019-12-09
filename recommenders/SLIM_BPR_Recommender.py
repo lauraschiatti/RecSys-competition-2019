@@ -72,27 +72,28 @@ class SLIM_BPR_Recommender(object):
         :return: pos_item_id, neg_item_id
         """
 
+        # By randomly selecting a user in this way we could end up
+        # with a user with no interactions
+        # user_id = np.random.randint(0, n_users)
+
+        user_id = np.random.choice(self.eligible_users)
+
         # Get user seen items and choose one
-        user_seen_items = self.URM[user_id].indices
-        pos_item_id = user_seen_items[np.random.randint(0,len(user_seen_items))]
+        user_seen_items = self.URM[user_id, :].indices
+        pos_item_id = np.random.choice(user_seen_items)
+        # pos_item_id = user_seen_items[np.random.randint(0,len(user_seen_items))]
 
-        # user_seen_items = self.URM[user_id, :].indices
-        # pos_item_id = np.random.choice(user_seen_items)
+        neg_item_selected = False
 
-        while(True):
+        # It's faster to just try again then to build a mapping of the non-seen items
+        while (not neg_item_selected):
             neg_item_id = np.random.randint(0, self.n_items)
 
-            if(neg_item_id not in user_seen_items):
-                return pos_item_id, neg_item_id
+            if (neg_item_id not in user_seen_items):
+                neg_item_selected = True
 
-            # negItemSelected = False
-            #
-            # # It's faster to just try again then to build a mapping of the non-seen items
-            # while (not negItemSelected):
-            #     neg_item_id = np.random.randint(0, self.n_items)
-            #
-            #     if (neg_item_id not in user_seen_items):
-            #         negItemSelected = True
+        return pos_item_id, neg_item_id
+
 
 
     def update_factors(self, user_id, pos_item_id, neg_item_id):

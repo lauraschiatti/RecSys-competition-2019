@@ -27,6 +27,7 @@ n_users = 0
 n_items = 0
 n_subclass = 0
 
+
 # -------------------------------------------
 # User Rating Matrix from training data
 # -------------------------------------------
@@ -41,7 +42,7 @@ def build_URM():
     with open(data_train, 'r') as file:  # read file's content
         next(file)  # skip header row
         for line in file:
-            if len(line.strip()) != 0: #  ignore lines with only whitespace
+            if len(line.strip()) != 0:  # ignore lines with only whitespace
                 n_interactions += 1
 
                 # Create a tuple for each interaction (line in the file)
@@ -51,9 +52,9 @@ def build_URM():
     user_list, item_list, rating_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
 
     # Create lists of all users, items and contents (ratings)
-    user_list = list(user_list) # row
-    item_list = list(item_list) # col
-    rating_list = list(rating_list) # data
+    user_list = list(user_list)  # row
+    item_list = list(item_list)  # col
+    rating_list = list(rating_list)  # data
 
     URM = csr_sparse_matrix(rating_list, user_list, item_list)
 
@@ -81,8 +82,9 @@ def get_statistics_URM(URM):
     print("No. of items\t {}, No. of users\t {}".format(n_unique_items, n_unique_users))
     # print("\tMax ID items\t {}, Max ID users\t {}\n".format(max(item_list_unique), max(user_list_unique)))
 
-use_validation_set = False
+
 def get_statistics_splitted_URM(SPLIT_URM_DICT):
+    use_validation_set = False
 
     print("\n ... Statistics on splitted URM ... ")
 
@@ -134,12 +136,12 @@ def build_ICM():
     class_list_icm = list(class_list)
     col_list_icm = np.zeros(len(col_list))
 
-    #Number of items that are in the subclass list
+    # Number of items that are in the subclass list
     num_items = max(item_list_icm) + 1
 
     ICM_shape = (num_items, 1)
 
-    ICM_subclass = csr_sparse_matrix(class_list_icm,item_list_icm,col_list_icm,shape=ICM_shape)
+    ICM_subclass = csr_sparse_matrix(class_list_icm, item_list_icm, col_list_icm, shape=ICM_shape)
 
     print("\n ... Loading price data ... ", end="\n")
 
@@ -190,17 +192,9 @@ def build_ICM():
 
     ICM_asset = csr_sparse_matrix(asset_list_icm, item_list_icm, col_list_icm)
 
+    ICM_all = sps.hstack([ICM_price, ICM_asset, ICM_subclass], format='csr')
 
-    ICM_all = sps.hstack([ICM_price,ICM_asset,ICM_subclass], format='csr')
-
-    features_per_item = np.ediff1d(ICM_all.indptr)
-    items_per_feature = np.ediff1d(ICM_all.indptr)
-
-    for x in range(3):
-        print(ICM_all[0,x])
-
-    print(features_per_item.shape)
-    print(items_per_feature.shape)
+    item_feature_ratios(ICM_all)
 
     return ICM_all
 
@@ -226,7 +220,6 @@ def build_ICM():
 #         print("\n")
 
 def compute_density(URM):
-
     n_users, n_items = URM.shape
     n_interactions = URM.nnz
 
@@ -238,7 +231,7 @@ def compute_density(URM):
     if n_interactions == 0:
         return 0.0
 
-    return n_interactions/(n_items*n_users)
+    return n_interactions / (n_items * n_users)
 
 
 # Getters
@@ -249,10 +242,12 @@ def get_user_list_unique():
     list_unique = list(set(user_list))  # remove duplicates
     return list_unique
 
+
 # Get item_id list
 def get_item_list_unique():
     list_unique = list(set(item_list))  # remove duplicates
     return list_unique
+
 
 # Get target user_id list
 def get_target_users():
@@ -266,16 +261,17 @@ def get_target_users():
 
     return target_user_id_list
 
+
 # Get user_id seen items
 def get_user_seen_items(user_id):
     # seen items: those the user already interacted with
     user_seen_items = URM[user_id].indices
 
-    return  user_seen_items
+    return user_seen_items
+
 
 # Get interactions of a given user_id (row in URM)
 def get_user_profile(URM, user_id):
-
     start_user_position = URM.indptr[user_id]
     end_user_position = URM.indptr[user_id + 1]
 
@@ -284,14 +280,15 @@ def get_user_profile(URM, user_id):
     # or interactions = URM[user_id, :]
     return user_profile
 
+
 # Get users that have no Train items
 def perc_user_no_item_train(URM_train):
     user_no_item_train = np.sum(np.ediff1d(URM_train.indptr) == 0)
 
     if user_no_item_train != 0:
         print("Warning: {} ({:.2f} %) of {} users have no Train items \n".format(user_no_item_train,
-                                                                              user_no_item_train / n_users * 100,
-                                                                              n_users))
+                                                                                 user_no_item_train / n_users * 100,
+                                                                                 n_users))
 
 
 def row_split(row_string):
@@ -323,7 +320,6 @@ def csr_sparse_matrix(data, row, col, shape=None):
 # ---------------------------------------------------
 
 def top_5_percept_popular_items(URM):
-
     # This is appropriate in cases where users can discover these items on their own,
     # and may not find these recommendations useful
 
@@ -348,9 +344,22 @@ def top_5_percept_popular_items(URM):
 
     # We are not interested in sorting the popularity value,
     # but to order the items according to it
-    popular_items = np.argsort(item_popularity) # sorted array indices
-    popular_items = np.flip(popular_items, axis=0) # reverse order of elements along the given axis
+    popular_items = np.argsort(item_popularity)  # sorted array indices
+    popular_items = np.flip(popular_items, axis=0)  # reverse order of elements along the given axis
 
     ten_perc_pop = popular_items[0:int(ten_percent_popular_items)]
 
     return ten_perc_pop
+
+
+
+def item_feature_ratios(ICM):
+    # Features per item
+    ICM = sps.csr_matrix(ICM)
+    features_per_item = np.ediff1d(ICM.indptr)  # differences between consecutive elements of an array.
+    print("\nFeatures Per Item: {}".format(features_per_item))
+
+    # Items per feature
+    ICM = sps.csc_matrix(ICM)
+    items_per_feature = np.ediff1d(ICM.indptr)
+    print("Items Per Feature: {}\n".format(items_per_feature))

@@ -47,7 +47,6 @@ class UserCFKNNRecommender(object):
 
         return scores
 
-        # Do not recommend popular items.
 
     def filter_popular(self, ranking, at=10):
         # get 5 % top popular items
