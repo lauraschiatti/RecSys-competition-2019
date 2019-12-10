@@ -75,7 +75,7 @@ while True:
             evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
             result_dict, _ = evaluator_test.evaluateRecommender(recommender)
 
-            print("result_dict", result_dict)
+            print("result_dict MAP", result_dict[10]["MAP"])
 
 
         elif recomm_type == 'UserKNNCFRecommender':
@@ -96,15 +96,8 @@ while True:
             evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
             result_dict, _ = evaluator_test.evaluateRecommender(recommender)
 
-            print("result_dict", result_dict)
+            print("result_dict MAP", result_dict[10]["MAP"])
 
-
-        # SLIM
-
-        # Matrix Factorization
-        # elif recomm_type == 'PureSVDRecommender':
-        #     recommender = PureSVDRecommender.PureSVDRecommender(URM_train)
-        #     recommender.fit()
 
         break
 
