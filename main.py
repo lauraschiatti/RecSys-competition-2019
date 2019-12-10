@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 
+import numpy as np
 from utils import data_manager
 from utils import evaluation as eval
 from utils import create_submission_file as create_csv
@@ -155,11 +156,7 @@ while True:
         # Matrix Factorization
         elif recomm_type == 'PureSVDRecommender':
             recommender = PureSVDRecommender.PureSVDRecommender(URM_train)
-            recommender.fit()
-
-            # result_dict, _ = evaluator_test.evaluateRecommender(recommender)
-            #
-            # print("result_dict PureSVD", result_dict)
+            recommender.fit(num_factors=1000)
 
         break
 
@@ -179,7 +176,7 @@ else:
     evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
     result_dict, _ = evaluator_test.evaluateRecommender(recommender)
 
-    print("result_dict PureSVDRecommender", result_dict)
+    print("result_dict", result_dict)
 
 
 
@@ -195,11 +192,17 @@ if predictions == 'y':
 
     target_user_id_list = data_manager.get_target_users()
 
-    for user_id in target_user_id_list:  # target users
+    for user_id in target_user_id_list: #[0:2]:
 
         item_list = ''
         for item in range(10):  # recommended_items
-            item_list = recommender.recommend(user_id)
+
+            if recomm_type != 'PureSVDRecommender':
+                item_list = recommender.recommend(user_id)
+
+            else:
+                item_list = recommender.recommend(user_id, cutoff=10)
+                item_list = np.array(item_list)  # list to np.array
 
             top_10_items[user_id] = item_list  # .strip() # remove trailing space
 
