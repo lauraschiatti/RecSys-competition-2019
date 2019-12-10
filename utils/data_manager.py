@@ -61,6 +61,8 @@ def build_URM():
 
     URM = csr_sparse_matrix(rating_list, user_list, item_list)
 
+    print("URM built!")
+
     return URM
 
 
@@ -113,7 +115,6 @@ def get_statistics_splitted_URM(SPLIT_URM_DICT):
 # -------------------------------------------------------------------------
 # Build Item Content Matrix with three features: asset, price and sub-class
 # -------------------------------------------------------------------------
-
 
 def build_ICM():
     # features = [‘asset’, ’price’, ’subclass’] info about products
@@ -197,7 +198,7 @@ def build_ICM():
 
     ICM_all = sps.hstack([ICM_price, ICM_asset, ICM_subclass], format='csr')
 
-    item_feature_ratios(ICM_all)
+    # item_feature_ratios(ICM_all)
 
     return ICM_all
 
@@ -369,29 +370,31 @@ def item_feature_ratios(ICM):
 
 
 
-# Automate Hyperparameter Optimization
-# Using Bayesian Optimization With Scikit-Optimize
-# ------------------------------------------------
-def parameter_tuning(URM):
+# Automate Hyperparameter Optimization using Bayesian Optimization With scikit-optimize
+# its purpose is to provide a very simple way to tune some of the most common parameters
+# ---------------------------------------------------------------------------------------
+
+def parameter_tuning(URM, recommender_class):
+
     URM_train, URM_test = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
     URM_train, URM_validation = data_splitter.split_train_validation_random_holdout(URM_train, train_split=0.9)
 
     # Step 1: Import the evaluator objects
+
     evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[5])
     evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[5, 10])
 
 
     # Step 2: Create BayesianSearch object
-    from utils.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
-    from utils.ParameterTuning.SearchBayesianSkopt import SearchBayesianSkopt
 
-    recommender_class = ItemKNNCFRecommender
+    from utils.ParameterTuning.SearchBayesianSkopt import SearchBayesianSkopt
 
     parameterSearch = SearchBayesianSkopt(recommender_class,
                                           evaluator_validation=evaluator_validation,
                                           evaluator_test=evaluator_test)
 
     # Step 3: Define parameters range
+
     from utils.ParameterTuning.SearchAbstractClass import SearchInputRecommenderArgs
     from skopt.space import Real, Integer, Categorical
 
@@ -416,7 +419,8 @@ def parameter_tuning(URM):
     if not os.path.exists(output_folder_path):
         os.makedirs(output_folder_path)
 
-    # Step 4: run!
+    # Step 4: run
+
     n_cases = 2
     metric_to_optimize = "MAP"
 
@@ -429,3 +433,17 @@ def parameter_tuning(URM):
                            output_file_name_root=recommender_class.RECOMMENDER_NAME,
                            metric_to_optimize=metric_to_optimize
                            )
+
+    # Step 5: return best_parameters
+
+    from utils.DataIO import DataIO
+
+    data_loader = DataIO(folder_path=output_folder_path)
+    search_metadata = data_loader.load_data(recommender_class.RECOMMENDER_NAME + "_metadata.zip")
+
+    print("search_metadata", search_metadata)
+
+    best_parameters = search_metadata["hyperparameters_best"]
+    print("best_parameters", best_parameters)
+
+    return best_parameters, URM_train, URM_test

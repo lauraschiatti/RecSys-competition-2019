@@ -8,7 +8,7 @@ Created on 10/03/2018
 import time, os, traceback
 from utils.Evaluation.Incremental_Training_Early_Stopping import Incremental_Training_Early_Stopping
 import numpy as np
-# from Base.DataIO import DataIO
+from utils.DataIO import DataIO
 
 class SearchInputRecommenderArgs(object):
 
@@ -53,9 +53,6 @@ class SearchInputRecommenderArgs(object):
           self.FIT_KEYWORD_ARGS = FIT_KEYWORD_ARGS
 
 
-
-
-
     def copy(self):
 
 
@@ -68,11 +65,6 @@ class SearchInputRecommenderArgs(object):
 
 
         return clone_object
-
-
-
-
-
 
 
 
@@ -186,8 +178,8 @@ class SearchAbstractClass(object):
         self.model_counter = 0
         self._init_metadata_dict(n_cases = n_cases)
 
-        # if self.save_metadata:
-        #     self.dataIO = DataIO(folder_path = self.output_folder_path)
+        if self.save_metadata:
+            self.dataIO = DataIO(folder_path = self.output_folder_path)
 
 
 
@@ -340,9 +332,9 @@ class SearchAbstractClass(object):
         self.metadata_dict["time_on_last_train"] = train_time
         self.metadata_dict["time_on_last_test"] = evaluation_test_time
 
-        # if self.save_metadata:
-        #     self.dataIO.save_data(data_dict_to_save = self.metadata_dict.copy(),
-        #                           file_name = self.output_file_name_root + "_metadata")
+        if self.save_metadata:
+            self.dataIO.save_data(data_dict_to_save = self.metadata_dict.copy(),
+                                  file_name = self.output_file_name_root + "_metadata")
 
         if self.save_model in ["all", "best", "last"]:
             self._print("{}: Saving model in {}\n".format(self.ALGORITHM_NAME, self.output_folder_path + self.output_file_name_root))
@@ -468,9 +460,9 @@ class SearchAbstractClass(object):
 
 
 
-        # if self.save_metadata:
-        #     self.dataIO.save_data(data_dict_to_save = self.metadata_dict.copy(),
-        #                           file_name = self.output_file_name_root + "_metadata")
+        if self.save_metadata:
+            self.dataIO.save_data(data_dict_to_save = self.metadata_dict.copy(),
+                                  file_name = self.output_file_name_root + "_metadata")
 
         self.model_counter += 1
 

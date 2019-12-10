@@ -31,13 +31,133 @@ ICM = data_manager.build_ICM()
 # URM, ICM = masks.refactor_URM_ICM(URM, ICM)
 
 
-# Parameter tuning
-# ----------------
-data_manager.parameter_tuning(URM)
+# ------------------------------------------ #
+#   Train model with parameters tuning
+# ------------------------------------------ #
+
+
+# Train model
+# -----------
+
+recommender_list = [
+    'ItemKNNCFRecommender',
+    'UserKNNCFRecommender']
+
+print('Recommender Systems: ')
+for i, recomm_type in enumerate(recommender_list, start=1):
+    print('{}. {}'.format(i, recomm_type))
+
+
+# Fit the model
+# -------------
+while True:
+    try:
+        selected = int(input('\nSelect a recommender system: '.format(i)))
+        recomm_type = recommender_list[selected-1]
+        print('\n ... {} ... '.format(recomm_type))
+
+        # Collaborative filtering
+        if recomm_type == 'ItemKNNCFRecommender':
+
+            from utils.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
+
+            recommender_class = ItemKNNCFRecommender
+
+            best_parameters, URM_train, URM_test = data_manager.parameter_tuning(URM, recommender_class=recommender_class)
+
+            print("best_params", best_parameters)
+
+            # Use an ItemKNNCF with the parameters we just learned
+            recommender = ItemKNNCFRecommender(URM_train)
+            recommender.fit(**best_parameters)
+
+            # Evaluate recommender
+            evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
+            result_dict, _ = evaluator_test.evaluateRecommender(recommender)
+
+            print("result_dict", result_dict)
+
+
+        elif recomm_type == 'UserKNNCFRecommender':
+
+            from utils.KNN.UserKNNCFRecommender import UserKNNCFRecommender
+
+            recommender_class = UserKNNCFRecommender
+
+            best_parameters, URM_train, URM_test = data_manager.parameter_tuning(URM, recommender_class=recommender_class)
+
+            print("best_params", best_parameters)
+
+            # Use an ItemKNNCF with the parameters we just learned
+            recommender = UserKNNCFRecommender(URM_train)
+            recommender.fit(**best_parameters)
+
+            # Evaluate recommender
+            evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
+            result_dict, _ = evaluator_test.evaluateRecommender(recommender)
+
+            print("result_dict", result_dict)
+
+
+        # SLIM
+
+        # Matrix Factorization
+        # elif recomm_type == 'PureSVDRecommender':
+        #     recommender = PureSVDRecommender.PureSVDRecommender(URM_train)
+        #     recommender.fit()
+
+        break
+
+    except (ValueError, IndexError):
+        print('Error. Please enter number between 1 and {}'.format(i))
+
+
+
+# Evaluate model on left-out ratings (URM_test)
+# ---------------------------------------------
+
+
+
+# Compute top-10 recommendations for each target user
+# ---------------------------------------------------
+
+predictions = input('\nCompute and save top10 predictions?: '
+                    'y - Yes  n - No\n')
+
+top_10_items = {}
+
+if predictions == 'y':
+
+    target_user_id_list = data_manager.get_target_users()
+
+    for user_id in target_user_id_list:
+
+        item_list = ''
+        for item in range(10):  # recommended_items
+
+            item_list = recommender.recommend(user_id, cutoff=10)
+            item_list = np.array(item_list)  # list to np.array
+
+            top_10_items[user_id] = item_list  # .strip() # remove trailing space
+
+
+    # save predictions on csv file
+    create_csv.create_csv(top_10_items, recomm_type)
+
 
 exit(0)
 
 
+
+#### ===================== #### ===================== #### ===================== #### ===================== ####
+#### ===================== #### ===================== #### ===================== #### ===================== ####
+#### ===================== #### ===================== #### ===================== #### ===================== ####
+
+
+
+# ------------------------------------------ #
+#   Train model without parameters tuning
+# ------------------------------------------ #
 
 # Train/test splitting
 # --------------------
@@ -69,9 +189,6 @@ assert data_splitter.assert_disjoint_matrices(list(SPLIT_URM_DICT.values()))
 data_manager.get_statistics_splitted_URM(SPLIT_URM_DICT)
 
 
-# Train model without left-out ratings)
-# ------------------------------------
-
 recommender_list = [
     'RandomRecommender',
     'TopPopRecommender',
@@ -79,8 +196,7 @@ recommender_list = [
     'UserCFKNNRecommender',
     'ItemCFKNNRecommender',
     'SLIM_BPR_Recommender',
-    'SLIMElasticNetRecommender',
-    'PureSVDRecommender']
+    'SLIMElasticNetRecommender']
 
 print('Recommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -162,11 +278,6 @@ while True:
             recommender = SLIMElasticNetRecommender.SLIMElasticNetRecommender(URM_train)
             recommender.fit()
 
-        # Matrix Factorization
-        elif recomm_type == 'PureSVDRecommender':
-            recommender = PureSVDRecommender.PureSVDRecommender(URM_train)
-            recommender.fit(num_factors=80)
-
         break
 
     except (ValueError, IndexError):
@@ -176,15 +287,7 @@ while True:
 # Evaluate model on left-out ratings (URM_test)
 # ---------------------------------------------
 
-if recomm_type != 'PureSVDRecommender':
-    eval.evaluate_algorithm(URM_test, recommender)
-
-else:
-    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
-    result_dict, _ = evaluator_test.evaluateRecommender(recommender)
-
-    print("result_dict", result_dict)
-
+eval.evaluate_algorithm(URM_test, recommender)
 
 
 # Compute top-10 recommendations for each target user
@@ -199,17 +302,11 @@ if predictions == 'y':
 
     target_user_id_list = data_manager.get_target_users()
 
-    for user_id in target_user_id_list: #[0:2]:
+    for user_id in target_user_id_list[0:20]:
 
         item_list = ''
         for item in range(10):  # recommended_items
-
-            if recomm_type != 'PureSVDRecommender':
-                item_list = recommender.recommend(user_id)
-
-            else:
-                item_list = recommender.recommend(user_id, cutoff=10)
-                item_list = np.array(item_list)  # list to np.array
+            item_list = recommender.recommend(user_id)
 
             top_10_items[user_id] = item_list  # .strip() # remove trailing space
 

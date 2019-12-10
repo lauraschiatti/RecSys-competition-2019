@@ -7,7 +7,7 @@ Created on 16/09/2017
 
 from recommenders.BaseRecommender import BaseRecommender
 # from Base.DataIO import DataIO
-# import numpy as np
+import numpy as np
 
 
 
@@ -65,6 +65,9 @@ class BaseSimilarityMatrixRecommender(BaseRecommender):
     ##########                               COMPUTE ITEM SCORES                                   ##########
     ##########                                                                                     ##########
     #########################################################################################################
+
+
+# _compute_item_score ==> recommend
 
 
 class BaseItemSimilarityMatrixRecommender(BaseSimilarityMatrixRecommender):
