@@ -381,8 +381,8 @@ def parameter_tuning(URM, recommender_class):
 
     # Step 1: Import the evaluator objects
 
-    evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[5])
-    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[5, 10])
+    evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[10])
+    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10, 20])
 
 
     # Step 2: Create BayesianSearch object
