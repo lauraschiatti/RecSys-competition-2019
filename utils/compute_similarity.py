@@ -456,3 +456,162 @@ def check_matrix(X, format='csc', dtype=np.float32):
         return check_matrix(X, format=format, dtype=dtype)
     else:
         return X.astype(dtype)
+
+
+
+from enum import Enum
+
+class SimilarityFunction(Enum):
+    COSINE = "cosine"
+    PEARSON = "pearson"
+    JACCARD = "jaccard"
+    TANIMOTO = "tanimoto"
+    ADJUSTED_COSINE = "adjusted"
+    EUCLIDEAN = "euclidean"
+
+
+class Compute_Similarity:
+
+
+    def __init__(self, dataMatrix, use_implementation = "density", similarity = None, **args):
+        """
+        Interface object that will call the appropriate similarity implementation
+        :param dataMatrix:
+        :param use_implementation:      "density" will choose the most efficient implementation automatically
+                                        "cython" will use the cython implementation, if available. Most efficient for sparse matrix
+                                        "python" will use the python implementation. Most efficent for dense matrix
+        :param similarity:              the type of similarity to use, see SimilarityFunction enum
+        :param args:                    other args required by the specific similarity implementation
+        """
+
+        assert np.all(np.isfinite(dataMatrix.data)), \
+            "Compute_Similarity: Data matrix contains {} non finite values".format(np.sum(np.logical_not(np.isfinite(dataMatrix.data))))
+
+        self.dense = False
+
+        if similarity == "euclidean":
+            # This is only available here
+            self.compute_similarity_object = Compute_Similarity_Euclidean(dataMatrix, **args)
+
+        else:
+
+            assert not (dataMatrix.shape[0] == 1 and dataMatrix.nnz == dataMatrix.shape[1]),\
+                "Compute_Similarity: data has only 1 feature (shape: {}) with dense values," \
+                " vector and set based similarities are not defined on 1-dimensional dense data," \
+                " use Euclidean similarity instead.".format(dataMatrix.shape)
+
+            if similarity is not None:
+                args["similarity"] = similarity
+
+
+            if use_implementation == "density":
+
+                if isinstance(dataMatrix, np.ndarray):
+                    self.dense = True
+
+                elif isinstance(dataMatrix, sps.spmatrix):
+                    shape = dataMatrix.shape
+
+                    num_cells = shape[0]*shape[1]
+
+                    sparsity = dataMatrix.nnz/num_cells
+
+                    self.dense = sparsity > 0.5
+
+                else:
+                    print("Compute_Similarity: matrix type not recognized, calling default...")
+                    use_implementation = "python"
+
+                if self.dense:
+                    print("Compute_Similarity: detected dense matrix")
+                    use_implementation = "python"
+                else:
+                    use_implementation = "cython"
+
+
+            if use_implementation == "cython":
+
+                try:
+                    from Base.Similarity.Cython.Compute_Similarity_Cython import Compute_Similarity_Cython
+                    self.compute_similarity_object = Compute_Similarity_Cython(dataMatrix, **args)
+
+                except ImportError:
+                    print("Unable to load Cython Compute_Similarity, reverting to Python")
+                    self.compute_similarity_object = Compute_Similarity_Python(dataMatrix, **args)
+
+
+            elif use_implementation == "python":
+                self.compute_similarity_object = Compute_Similarity_Python(dataMatrix, **args)
+
+            else:
+
+                raise  ValueError("Compute_Similarity: value for argument 'use_implementation' not recognized")
+
+
+    def compute_similarity(self,  **args):
+
+        return self.compute_similarity_object.compute_similarity(**args)
+
+
+
+
+class Compute_Similarity_Euclidean:
+
+
+    def __init__(self, dataMatrix, topK=100, shrink = 0, normalize=False, normalize_avg_row=False,
+                 similarity_from_distance_mode ="lin", row_weights = None, **args):
+        """
+        Computes the euclidean similarity on the columns of dataMatrix
+        If it is computed on URM=|users|x|items|, pass the URM as is.
+        If it is computed on ICM=|items|x|features|, pass the ICM transposed.
+        :param dataMatrix:
+        :param topK:
+        :param normalize
+        :param row_weights:         Multiply the values in each row by a specified value. Array
+        :param similarity_from_distance_mode:       "exp"   euclidean_similarity = 1/(e ^ euclidean_distance)
+                                                    "lin"        euclidean_similarity = 1/(1 + euclidean_distance)
+                                                    "log"        euclidean_similarity = 1/(1 + euclidean_distance)
+        :param args:                accepts other parameters not needed by the current object
+        """
+
+        super(Compute_Similarity_Euclidean, self).__init__()
+
+        self.shrink = shrink
+        self.normalize = normalize
+        self.normalize_avg_row = normalize_avg_row
+
+        self.n_rows, self.n_columns = dataMatrix.shape
+        self.TopK = min(topK, self.n_columns)
+
+        self.dataMatrix = dataMatrix.copy()
+
+        self.similarity_is_exp = False
+        self.similarity_is_lin = False
+        self.similarity_is_log = False
+
+        if similarity_from_distance_mode == "exp":
+            self.similarity_is_exp = True
+        elif similarity_from_distance_mode == "lin":
+            self.similarity_is_lin = True
+        elif similarity_from_distance_mode == "log":
+            self.similarity_is_log = True
+        else:
+            raise ValueError("Compute_Similarity_Euclidean: value for parameter 'mode' not recognized."
+                             " Allowed values are: 'exp', 'lin', 'log'."
+                             " Passed value was '{}'".format(similarity_from_distance_mode))
+
+
+
+        self.use_row_weights = False
+
+        if row_weights is not None:
+
+            if dataMatrix.shape[0] != len(row_weights):
+                raise ValueError("Compute_Similarity_Euclidean: provided row_weights and dataMatrix have different number of rows."
+                                 "row_weights has {} rows, dataMatrix has {}.".format(len(row_weights), dataMatrix.shape[0]))
+
+            self.use_row_weights = True
+            self.row_weights = row_weights.copy()
+            self.row_weights_diag = sps.diags(self.row_weights)
+
+            self.dataMatrix_weighted = self.dataMatrix.T.dot(self.row_weights_diag).T

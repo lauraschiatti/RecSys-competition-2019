@@ -9,4 +9,7 @@ __pycache__
 *.pyc
 
 # Ignore submissions
-/submissions/
+submissions/
+
+# Ignore hyperparameter tuning
+result_experiments/

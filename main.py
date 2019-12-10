@@ -7,6 +7,7 @@ from utils import evaluation as eval
 from utils import create_submission_file as create_csv
 from utils import data_splitter
 from utils import masks
+from utils.Evaluation.Evaluator import EvaluatorHoldout
 from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommender, ItemCFKNNRecommender, \
     SLIM_BPR_Recommender,SLIMElasticNetRecommender, itemCBFKNNRecommender, PureSVDRecommender
 
@@ -28,6 +29,14 @@ ICM = data_manager.build_ICM()
 # ----------------------------------------
 
 # URM, ICM = masks.refactor_URM_ICM(URM, ICM)
+
+
+# Parameter tuning
+# ----------------
+data_manager.parameter_tuning(URM)
+
+exit(0)
+
 
 
 # Train/test splitting
@@ -156,7 +165,7 @@ while True:
         # Matrix Factorization
         elif recomm_type == 'PureSVDRecommender':
             recommender = PureSVDRecommender.PureSVDRecommender(URM_train)
-            recommender.fit(num_factors=1000)
+            recommender.fit(num_factors=80)
 
         break
 
@@ -171,8 +180,6 @@ if recomm_type != 'PureSVDRecommender':
     eval.evaluate_algorithm(URM_test, recommender)
 
 else:
-    from utils.Evaluation.Evaluator import EvaluatorHoldout
-
     evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
     result_dict, _ = evaluator_test.evaluateRecommender(recommender)
 

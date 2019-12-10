@@ -8,6 +8,9 @@
 import scipy.sparse as sps
 import numpy as np
 
+from utils import data_splitter
+from utils.Evaluation.Evaluator import EvaluatorHoldout
+
 dataset_dir = "dataset/"
 
 # Interactions files (URM)
@@ -363,3 +366,66 @@ def item_feature_ratios(ICM):
     ICM = sps.csc_matrix(ICM)
     items_per_feature = np.ediff1d(ICM.indptr)
     print("Items Per Feature: {}\n".format(items_per_feature))
+
+
+
+# Automate Hyperparameter Optimization
+# Using Bayesian Optimization With Scikit-Optimize
+# ------------------------------------------------
+def parameter_tuning(URM):
+    URM_train, URM_test = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
+    URM_train, URM_validation = data_splitter.split_train_validation_random_holdout(URM_train, train_split=0.9)
+
+    # Step 1: Import the evaluator objects
+    evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[5])
+    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[5, 10])
+
+
+    # Step 2: Create BayesianSearch object
+    from utils.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
+    from utils.ParameterTuning.SearchBayesianSkopt import SearchBayesianSkopt
+
+    recommender_class = ItemKNNCFRecommender
+
+    parameterSearch = SearchBayesianSkopt(recommender_class,
+                                          evaluator_validation=evaluator_validation,
+                                          evaluator_test=evaluator_test)
+
+    # Step 3: Define parameters range
+    from utils.ParameterTuning.SearchAbstractClass import SearchInputRecommenderArgs
+    from skopt.space import Real, Integer, Categorical
+
+    hyperparameters_range_dictionary = {}
+    hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
+    hyperparameters_range_dictionary["shrink"] = Integer(0, 1000)
+    hyperparameters_range_dictionary["similarity"] = Categorical(["cosine"])
+    hyperparameters_range_dictionary["normalize"] = Categorical([True, False])
+
+    recommender_input_args = SearchInputRecommenderArgs(
+        CONSTRUCTOR_POSITIONAL_ARGS=[URM_train],
+        CONSTRUCTOR_KEYWORD_ARGS={},
+        FIT_POSITIONAL_ARGS=[],
+        FIT_KEYWORD_ARGS={}
+    )
+
+    output_folder_path = "result_experiments/"
+
+    import os
+
+    # If directory does not exist, create
+    if not os.path.exists(output_folder_path):
+        os.makedirs(output_folder_path)
+
+    # Step 4: run!
+    n_cases = 2
+    metric_to_optimize = "MAP"
+
+    parameterSearch.search(recommender_input_args,
+                           parameter_search_space=hyperparameters_range_dictionary,
+                           n_cases=n_cases,
+                           n_random_starts=1,
+                           save_model="no",
+                           output_folder_path=output_folder_path,
+                           output_file_name_root=recommender_class.RECOMMENDER_NAME,
+                           metric_to_optimize=metric_to_optimize
+                           )
