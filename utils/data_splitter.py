@@ -8,7 +8,7 @@ Created on 23/04/2019
 import numpy as np
 import scipy.sparse as sps
 
-from . import data_manager
+from data_manager import csr_sparse_matrix
 
 # Train-Test splitting
 # Keep local split as similar as possible to online split (public split)
@@ -129,13 +129,13 @@ def split_train_validation_random_holdout(URM, train_split):
         number_interactions,
         p=[train_split, 1 - train_split])  # train_perc for True, 1-train_perc for False
 
-    URM_train = data_manager.csr_sparse_matrix(URM.data[train_mask],
+    URM_train = csr_sparse_matrix(URM.data[train_mask],
                                   URM.row[train_mask],
                                   URM.col[train_mask],
                                   shape=shape)
 
     test_mask = np.logical_not(train_mask)  # remaining samples
-    URM_test = data_manager.csr_sparse_matrix(URM.data[test_mask],
+    URM_test = csr_sparse_matrix(URM.data[test_mask],
                                  URM.row[test_mask],
                                  URM.col[test_mask],
                                  shape=shape)

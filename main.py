@@ -78,7 +78,7 @@ ICM_all = build_ICM()
 # dataSplitter = DataSplitter_Warm_k_fold(dataset_object)
 # dataSplitter.load_data()
 # URM_train, URM_validation, URM_test = dataSplitter.get_holdout_split()
-
+# todo: try splitting using get_holdout_split
 URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
 URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
 
@@ -92,11 +92,11 @@ evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10, 15])
 evaluator_validation_earlystopping = None  # EvaluatorHoldout(URM_train, cutoff_list=[5], exclude_seen = False)
 output_folder_path = "result_experiments/"
 
-n_cases = 8  # 2
-n_random_starts = 5  # 1
+n_cases = 5 # 2
+n_random_starts = 2  # 1
 
 save_model = "no"
-allow_weighting = False #todo: try with weighting
+allow_weighting = False #todo: try with feature_weighting
 similarity_type_list = ["cosine"]
 
 ICM_name = "ICM_all"
@@ -240,13 +240,20 @@ while True:
         if predictions == 'y':
 
             # Train the model on the whole dataset using tuned params
-            recommender = recommender_class(URM_all)
+
+            # Fit the recommender with the parameters we just learned
+            if recommender_class in content_algorithm_list:
+                # todo: ICM_all or ICM_train?
+                recommender = recommender_class(URM_train, ICM_all)
+            else:
+                recommender = recommender_class(URM_train)
+
             recommender.fit(**best_parameters)
 
             top_10_items = {}
             target_user_id_list = get_target_users()
 
-            for user_id in target_user_id_list[0:10]:
+            for user_id in target_user_id_list:
                 item_list = ''
                 for item in range(10):  # recommended_items
                     item_list = recommender.recommend(user_id, cutoff=10)

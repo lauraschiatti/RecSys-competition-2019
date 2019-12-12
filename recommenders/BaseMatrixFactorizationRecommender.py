@@ -5,13 +5,13 @@ Created on 16/09/2017
 @author: Maurizio Ferrari Dacrema
 """
 
-from recommenders import BaseRecommender
+from recommenders.BaseRecommender import BaseRecommender
 # from KNN.ItemKNNCustomSimilarityRecommender import ItemKNNCustomSimilarityRecommender
 
 import numpy as np
 
 
-class BaseMatrixFactorizationRecommender(BaseRecommender.BaseRecommender):
+class BaseMatrixFactorizationRecommender(BaseRecommender):
     """
     This class refers to a BaseRecommender KNN which uses matrix factorization,
     it provides functions to compute item's score as well as a function to save the W_matrix
