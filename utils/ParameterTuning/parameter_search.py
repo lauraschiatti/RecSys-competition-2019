@@ -9,6 +9,9 @@ Created on 22/11/17
 # using bayesian optimization with scikit-optimize
 # -------------------------------------------------
 
+import os, multiprocessing
+from functools import partial
+
 ######################################################################
 ##########                                                  ##########
 ##########                  PURE COLLABORATIVE              ##########
@@ -17,8 +20,8 @@ Created on 22/11/17
 # from Base.NonPersonalizedRecommender import TopPop, Random, GlobalEffects
 
 # KNN
-from utils.KNN import UserKNNCFRecommender
-from utils.KNN import ItemKNNCFRecommender
+from utils.KNN.UserKNNCFRecommender import UserKNNCFRecommender
+from utils.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
 # from GraphBased.P3alphaRecommender import P3alphaRecommender
 # from GraphBased.RP3betaRecommender import RP3betaRecommender
 
@@ -494,13 +497,9 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
         error_file.write("On recommender {} Exception {}\n".format(recommender_class, str(e)))
         error_file.close()
 
-
-import os, multiprocessing
-from functools import partial
-
-
+"""
 def read_data_split_and_search():
-    """
+    
     This function provides a simple example on how to tune parameters of a given algorithm
     The BayesianSearch object will save:
         - A .txt file with all the cases explored and the recommendation quality
@@ -508,64 +507,65 @@ def read_data_split_and_search():
         - A _best_parameter file which contains a dictionary with all the fit parameters, it can be passed to recommender.fit(**_best_parameter)
         - A _best_result_validation file which contains a dictionary with the results of the best solution on the validation
         - A _best_result_test file which contains a dictionary with the results, on the test set, of the best solution chosen using the validation set
-    """
+ 
 
-    # from Data_manager.Movielens1M.Movielens1MReader import Movielens1MReader
-    # from Data_manager.DataSplitter_k_fold_stratified import DataSplitter_Warm_k_fold
+    from Data_manager.Movielens1M.Movielens1MReader import Movielens1MReader
+    from Data_manager.DataSplitter_k_fold_stratified import DataSplitter_Warm_k_fold
 
-    # dataset_object = Movielens1MReader()
-    # dataSplitter = DataSplitter_Warm_k_fold(dataset_object)
-    # dataSplitter.load_data()
-    # URM_train, URM_validation, URM_test = dataSplitter.get_holdout_split()
 
-    from utils import data_splitter, data_manager
-    URM = data_manager.build_URM()
+    dataset_object = Movielens1MReader()
 
-    URM_train, URM_test = data_splitter.split_train_validation_random_holdout(URM, train_split=0.8)
-    URM_train, URM_validation = data_splitter.split_train_validation_random_holdout(URM_train, train_split=0.9)
+    dataSplitter = DataSplitter_Warm_k_fold(dataset_object)
+
+    dataSplitter.load_data()
+
+    URM_train, URM_validation, URM_test = dataSplitter.get_holdout_split()
+
 
     output_folder_path = "result_experiments/SKOPT_prova/"
+
 
     # If directory does not exist, create
     if not os.path.exists(output_folder_path):
         os.makedirs(output_folder_path)
 
     collaborative_algorithm_list = [
-        # Random,
-        # TopPop,
-        # P3alphaRecommender,
-        # RP3betaRecommender,
+        Random,
+        TopPop,
+        P3alphaRecommender,
+        RP3betaRecommender,
         ItemKNNCFRecommender,
         UserKNNCFRecommender,
-        # MatrixFactorization_BPR_Cython,
-        # MatrixFactorization_FunkSVD_Cython,
-        # PureSVDRecommender,
-        # SLIM_BPR_Cython,
-        # SLIMElasticNetRecommender
+        MatrixFactorization_BPR_Cython,
+        MatrixFactorization_FunkSVD_Cython,
+        PureSVDRecommender,
+        SLIM_BPR_Cython,
+        SLIMElasticNetRecommender
     ]
 
-    from utils.Evaluation.Evaluator import EvaluatorHoldout
+    from Base.Evaluation.Evaluator import EvaluatorHoldout
 
-    evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[10])
-    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10, 15])
+    evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[5])
+    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[5, 10])
+
 
     runParameterSearch_Collaborative_partial = partial(runParameterSearch_Collaborative,
-                                                       URM_train=URM_train,
-                                                       metric_to_optimize="MAP",
-                                                       n_cases=8,
-                                                       evaluator_validation_earlystopping=evaluator_validation,
-                                                       evaluator_validation=evaluator_validation,
-                                                       evaluator_test=evaluator_test,
-                                                       output_folder_path=output_folder_path)
+                                                       URM_train = URM_train,
+                                                       metric_to_optimize = "MAP",
+                                                       n_cases = 8,
+                                                       evaluator_validation_earlystopping = evaluator_validation,
+                                                       evaluator_validation = evaluator_validation,
+                                                       evaluator_test = evaluator_test,
+                                                       output_folder_path = output_folder_path)
 
-    #
-    # from Utils.PoolWithSubprocess import PoolWithSubprocess
-    #
-    #
-    # pool = PoolWithSubprocess(processes=int(multiprocessing.cpu_count()), maxtasksperchild=1)
-    # resultList = pool.map(runParameterSearch_Collaborative_partial, collaborative_algorithm_list)
-    # pool.close()
-    # pool.join()
+
+
+    from Utils.PoolWithSubprocess import PoolWithSubprocess
+
+    pool = PoolWithSubprocess(processes=int(multiprocessing.cpu_count()), maxtasksperchild=1)
+    resultList = pool.map(runParameterSearch_Collaborative_partial, collaborative_algorithm_list)
+    pool.close()
+    pool.join()
 
     for recommender_class in collaborative_algorithm_list:
 
@@ -579,77 +579,70 @@ def read_data_split_and_search():
             traceback.print_exc()
 
 
-    from utils.DataIO import DataIO
+    if __name__ == '__main__':
+        read_data_split_and_search()
 
+"""
+
+
+"""
+    ### Steps ####
+    
+    Step 1: Import the evaluator objects
+    
+    evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[10])
+    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10, 15])
+    
+    Step 2: Create BayesianSearch object
+    
+    parameterSearch = SearchBayesianSkopt(recommender_class,
+                                         evaluator_validation=evaluator_validation,
+                                         evaluator_test=evaluator_test)
+    
+    Step 3: Define parameters range
+    
+    hyperparameters_range_dictionary = {}
+    hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
+    hyperparameters_range_dictionary["shrink"] = Integer(0, 1000)
+    hyperparameters_range_dictionary["similarity"] = Categorical(["cosine"])
+    hyperparameters_range_dictionary["normalize"] = Categorical([True, False])
+    
+    recommender_input_args = SearchInputRecommenderArgs(
+        CONSTRUCTOR_POSITIONAL_ARGS=[URM_train],
+        CONSTRUCTOR_KEYWORD_ARGS={},
+        FIT_POSITIONAL_ARGS=[],
+        FIT_KEYWORD_ARGS={}
+    )
+    
+    output_folder_path = "result_experiments/"
+    
+    # If directory does not exist, create
+    if not os.path.exists(output_folder_path):
+        os.makedirs(output_folder_path)
+    
+    Step 4: run
+    
+    n_cases = 2
+    metric_to_optimize = "MAP"
+    
+    parameterSearch.search(recommender_input_args,
+                           parameter_search_space=hyperparameters_range_dictionary,
+                           n_cases=n_cases,
+                           n_random_starts=1,
+                           save_model="no",
+                           output_folder_path=output_folder_path,
+                           output_file_name_root=recommender_class.RECOMMENDER_NAME,
+                           metric_to_optimize=metric_to_optimize
+                           )
+    
+    Step 5: return best_parameters
+    from utils.DataIO import DataIO
     data_loader = DataIO(folder_path=output_folder_path)
     search_metadata = data_loader.load_data(recommender_class.RECOMMENDER_NAME + "_metadata.zip")
     print("search_metadata", search_metadata)
-
+    
     best_parameters = search_metadata["hyperparameters_best"]
     print("best_parameters", best_parameters)
-
+    
     return best_parameters, URM_train, URM_test
-
-
-# if __name__ == '__main__':
-#     read_data_split_and_search()
-
-    #### Steps ####
-
-    # Step 1: Import the evaluator objects
-
-    # evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[10])
-    # evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10, 15])
-
-    # Step 2: Create BayesianSearch object
-
-    # parameterSearch = SearchBayesianSkopt(recommender_class,
-    #                                      evaluator_validation=evaluator_validation,
-    #                                      evaluator_test=evaluator_test)
-
-    # Step 3: Define parameters range
-
-    # hyperparameters_range_dictionary = {}
-    # hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
-    # hyperparameters_range_dictionary["shrink"] = Integer(0, 1000)
-    # hyperparameters_range_dictionary["similarity"] = Categorical(["cosine"])
-    # hyperparameters_range_dictionary["normalize"] = Categorical([True, False])
-    #
-    # recommender_input_args = SearchInputRecommenderArgs(
-    #     CONSTRUCTOR_POSITIONAL_ARGS=[URM_train],
-    #     CONSTRUCTOR_KEYWORD_ARGS={},
-    #     FIT_POSITIONAL_ARGS=[],
-    #     FIT_KEYWORD_ARGS={}
-    # )
-    #
-    # output_folder_path = "result_experiments/"
-    #
-    # # If directory does not exist, create
-    # if not os.path.exists(output_folder_path):
-    #     os.makedirs(output_folder_path)
-
-    # Step 4: run
-
-    # n_cases = 2
-    # metric_to_optimize = "MAP"
-    #
-    # parameterSearch.search(recommender_input_args,
-    #                        parameter_search_space=hyperparameters_range_dictionary,
-    #                        n_cases=n_cases,
-    #                        n_random_starts=1,
-    #                        save_model="no",
-    #                        output_folder_path=output_folder_path,
-    #                        output_file_name_root=recommender_class.RECOMMENDER_NAME,
-    #                        metric_to_optimize=metric_to_optimize
-    #                        )
-
-    # Step 5: return best_parameters
-    # from utils.DataIO import DataIO
-    # data_loader = DataIO(folder_path=output_folder_path)
-    # search_metadata = data_loader.load_data(recommender_class.RECOMMENDER_NAME + "_metadata.zip")
-    # print("search_metadata", search_metadata)
-    #
-    # best_parameters = search_metadata["hyperparameters_best"]
-    # print("best_parameters", best_parameters)
-    #
-    # return best_parameters, URM_train, URM_test
+"""

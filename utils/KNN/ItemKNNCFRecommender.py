@@ -21,8 +21,6 @@ class ItemKNNCFRecommender(BaseItemSimilarityMatrixRecommender):
 
     FEATURE_WEIGHTING_VALUES = ["BM25", "TF-IDF", "none"]
 
-
-
     def __init__(self, URM_train, verbose = True):
         super(ItemKNNCFRecommender, self).__init__(URM_train, verbose = verbose)
 

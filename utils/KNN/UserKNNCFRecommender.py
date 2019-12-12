@@ -21,7 +21,6 @@ class UserKNNCFRecommender(BaseUserSimilarityMatrixRecommender):
 
     FEATURE_WEIGHTING_VALUES = ["BM25", "TF-IDF", "none"]
 
-
     def __init__(self, URM_train, verbose = True):
         super(UserKNNCFRecommender, self).__init__(URM_train, verbose = verbose)
 
@@ -35,7 +34,7 @@ class UserKNNCFRecommender(BaseUserSimilarityMatrixRecommender):
         if feature_weighting not in self.FEATURE_WEIGHTING_VALUES:
             raise ValueError("Value for 'feature_weighting' not recognized. Acceptable values are {}, provided was '{}'".format(self.FEATURE_WEIGHTING_VALUES, feature_weighting))
 
-        #
+
         # if feature_weighting == "BM25":
         #     self.URM_train = self.URM_train.astype(np.float32)
         #     self.URM_train = okapi_BM_25(self.URM_train.T).T

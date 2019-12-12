@@ -11,6 +11,11 @@ from recommenders import RandomRecommender, TopPopRecommender, UserCFKNNRecommen
     SLIM_BPR_Recommender,SLIMElasticNetRecommender, itemCBFKNNRecommender
 
 
+# ------------------------------------------ #
+#   Train model without parameters tuning
+# ------------------------------------------ #
+
+
 # Build URM
 # ---------
 
@@ -29,10 +34,6 @@ ICM = data_manager.build_ICM()
 
 # URM, ICM = masks.refactor_URM_ICM(URM, ICM)
 
-
-# ------------------------------------------ #
-#   Train model without parameters tuning
-# ------------------------------------------ #
 
 # Train/test splitting
 # --------------------

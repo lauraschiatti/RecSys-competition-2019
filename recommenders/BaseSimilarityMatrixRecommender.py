@@ -6,9 +6,8 @@ Created on 16/09/2017
 """
 
 from recommenders.BaseRecommender import BaseRecommender
-# from Base.DataIO import DataIO
+from utils.DataIO import DataIO
 import numpy as np
-
 
 
 class BaseSimilarityMatrixRecommender(BaseRecommender):
@@ -43,20 +42,20 @@ class BaseSimilarityMatrixRecommender(BaseRecommender):
 
 
 
-    #
-    # def save_model(self, folder_path, file_name = None):
-    #
-    #     if file_name is None:
-    #         file_name = self.RECOMMENDER_NAME
-    #
-    #     self._print("Saving model in file '{}'".format(folder_path + file_name))
-    #
-    #     data_dict_to_save = {"W_sparse": self.W_sparse}
-    #
-    #     dataIO = DataIO(folder_path=folder_path)
-    #     dataIO.save_data(file_name=file_name, data_dict_to_save = data_dict_to_save)
-    #
-    #     self._print("Saving complete")
+
+    def save_model(self, folder_path, file_name = None):
+
+        if file_name is None:
+            file_name = self.RECOMMENDER_NAME
+
+        self._print("Saving model in file '{}'".format(folder_path + file_name))
+
+        data_dict_to_save = {"W_sparse": self.W_sparse}
+
+        dataIO = DataIO(folder_path=folder_path)
+        dataIO.save_data(file_name=file_name, data_dict_to_save = data_dict_to_save)
+
+        self._print("Saving complete")
 
 
 
@@ -65,9 +64,6 @@ class BaseSimilarityMatrixRecommender(BaseRecommender):
     ##########                               COMPUTE ITEM SCORES                                   ##########
     ##########                                                                                     ##########
     #########################################################################################################
-
-
-# _compute_item_score ==> recommend
 
 
 class BaseItemSimilarityMatrixRecommender(BaseSimilarityMatrixRecommender):
