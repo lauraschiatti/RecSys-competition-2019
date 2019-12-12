@@ -187,6 +187,7 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
                                      n_cases=35, n_random_starts=5, resume_from_saved=False, save_model="best",
                                      allow_weighting=True,
                                      similarity_type_list=None):
+
     # If directory does not exist, create
     if not os.path.exists(output_folder_path):
         os.makedirs(output_folder_path)
@@ -469,23 +470,24 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
 
         #########################################################################################################
 
-        if URM_train_last_test is not None:
-            recommender_input_args_last_test = recommender_input_args.copy()
-            recommender_input_args_last_test.CONSTRUCTOR_POSITIONAL_ARGS[0] = URM_train_last_test
-        else:
-            recommender_input_args_last_test = None
+        # if URM_train_last_test is not None:
+        #     recommender_input_args_last_test = recommender_input_args.copy()
+        #     recommender_input_args_last_test.CONSTRUCTOR_POSITIONAL_ARGS[0] = URM_train_last_test
+        # else:
+        #     recommender_input_args_last_test = None
+        #
+        # ## Final step, after the hyperparameter range has been defined for each type of algorithm
+        # parameterSearch.search(recommender_input_args,
+        #                        parameter_search_space=hyperparameters_range_dictionary,
+        #                        n_cases=n_cases,
+        #                        n_random_starts=n_random_starts,
+        #                        resume_from_saved=resume_from_saved,
+        #                        save_model=save_model,
+        #                        output_folder_path=output_folder_path,
+        #                        output_file_name_root=output_file_name_root,
+        #                        metric_to_optimize=metric_to_optimize,
+        #                        recommender_input_args_last_test=recommender_input_args_last_test)
 
-        ## Final step, after the hyperparameter range has been defined for each type of algorithm
-        parameterSearch.search(recommender_input_args,
-                               parameter_search_space=hyperparameters_range_dictionary,
-                               n_cases=n_cases,
-                               n_random_starts=n_random_starts,
-                               resume_from_saved=resume_from_saved,
-                               save_model=save_model,
-                               output_folder_path=output_folder_path,
-                               output_file_name_root=output_file_name_root,
-                               metric_to_optimize=metric_to_optimize,
-                               recommender_input_args_last_test=recommender_input_args_last_test)
 
 
     except Exception as e:
@@ -497,8 +499,12 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
         error_file.write("On recommender {} Exception {}\n".format(recommender_class, str(e)))
         error_file.close()
 
+
+
+
 """
 def read_data_split_and_search():
+ 
     
     This function provides a simple example on how to tune parameters of a given algorithm
     The BayesianSearch object will save:
@@ -507,7 +513,6 @@ def read_data_split_and_search():
         - A _best_parameter file which contains a dictionary with all the fit parameters, it can be passed to recommender.fit(**_best_parameter)
         - A _best_result_validation file which contains a dictionary with the results of the best solution on the validation
         - A _best_result_test file which contains a dictionary with the results, on the test set, of the best solution chosen using the validation set
- 
 
     from Data_manager.Movielens1M.Movielens1MReader import Movielens1MReader
     from Data_manager.DataSplitter_k_fold_stratified import DataSplitter_Warm_k_fold
@@ -587,6 +592,9 @@ def read_data_split_and_search():
 
 """
     ### Steps ####
+    
+    URM_train, URM_test = split_train_validation_random_holdout(URM, train_split=0.8)
+    URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
     
     Step 1: Import the evaluator objects
     

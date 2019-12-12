@@ -11,5 +11,5 @@ __pycache__
 # Ignore submissions
 submissions/
 
-# Ignore hyperparameter tuning
+# Ignore hyperparameter tuning experiments
 result_experiments/

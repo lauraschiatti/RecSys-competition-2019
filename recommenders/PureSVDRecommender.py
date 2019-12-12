@@ -5,13 +5,13 @@ Created on 14/06/18
 @author: Maurizio Ferrari Dacrema
 """
 
-from recommenders import BaseMatrixFactorizationRecommender
+from recommenders.BaseMatrixFactorizationRecommender import BaseMatrixFactorizationRecommender
 
 from sklearn.utils.extmath import randomized_svd
 import scipy.sparse as sps
 
 
-class PureSVDRecommender(BaseMatrixFactorizationRecommender.BaseMatrixFactorizationRecommender):
+class PureSVDRecommender(BaseMatrixFactorizationRecommender):
     """ PureSVDRecommender"""
 
     RECOMMENDER_NAME = "PureSVDRecommender"
