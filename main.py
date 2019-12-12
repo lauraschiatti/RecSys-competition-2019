@@ -240,13 +240,11 @@ while True:
         if predictions == 'y':
 
             # Train the model on the whole dataset using tuned params
-
-            # Fit the recommender with the parameters we just learned
             if recommender_class in content_algorithm_list:
                 # todo: ICM_all or ICM_train?
-                recommender = recommender_class(URM_train, ICM_all)
+                recommender = recommender_class(URM_all, ICM_all)
             else:
-                recommender = recommender_class(URM_train)
+                recommender = recommender_class(URM_all)
 
             recommender.fit(**best_parameters)
 
