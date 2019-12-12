@@ -30,7 +30,7 @@ from utils.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
 # from SLIM_ElasticNet.SLIMElasticNetRecommender import SLIMElasticNetRecommender
 
 # Matrix Factorization
-# from MatrixFactorization.PureSVDRecommender import PureSVDRecommender
+from recommenders.PureSVDRecommender import PureSVDRecommender
 # from MatrixFactorization.IALSRecommender import IALSRecommender
 # from MatrixFactorization.NMFRecommender import NMFRecommender
 # from MatrixFactorization.Cython.MatrixFactorization_Cython import MatrixFactorization_BPR_Cython,\
@@ -405,16 +405,16 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
 
         ##########################################################################################################
 
-        # if recommender_class is PureSVDRecommender:
-        #     hyperparameters_range_dictionary = {}
-        #     hyperparameters_range_dictionary["num_factors"] = Integer(1, 350)
-        #
-        #     recommender_input_args = SearchInputRecommenderArgs(
-        #         CONSTRUCTOR_POSITIONAL_ARGS=[URM_train],
-        #         CONSTRUCTOR_KEYWORD_ARGS={},
-        #         FIT_POSITIONAL_ARGS=[],
-        #         FIT_KEYWORD_ARGS={}
-        #     )
+        if recommender_class is PureSVDRecommender:
+            hyperparameters_range_dictionary = {}
+            hyperparameters_range_dictionary["num_factors"] = Integer(1, 350)
+
+            recommender_input_args = SearchInputRecommenderArgs(
+                CONSTRUCTOR_POSITIONAL_ARGS=[URM_train],
+                CONSTRUCTOR_KEYWORD_ARGS={},
+                FIT_POSITIONAL_ARGS=[],
+                FIT_KEYWORD_ARGS={}
+            )
 
         ##########################################################################################################
 
@@ -470,25 +470,23 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
 
         #########################################################################################################
 
-        # if URM_train_last_test is not None:
-        #     recommender_input_args_last_test = recommender_input_args.copy()
-        #     recommender_input_args_last_test.CONSTRUCTOR_POSITIONAL_ARGS[0] = URM_train_last_test
-        # else:
-        #     recommender_input_args_last_test = None
-        #
-        # ## Final step, after the hyperparameter range has been defined for each type of algorithm
-        # parameterSearch.search(recommender_input_args,
-        #                        parameter_search_space=hyperparameters_range_dictionary,
-        #                        n_cases=n_cases,
-        #                        n_random_starts=n_random_starts,
-        #                        resume_from_saved=resume_from_saved,
-        #                        save_model=save_model,
-        #                        output_folder_path=output_folder_path,
-        #                        output_file_name_root=output_file_name_root,
-        #                        metric_to_optimize=metric_to_optimize,
-        #                        recommender_input_args_last_test=recommender_input_args_last_test)
+        if URM_train_last_test is not None:
+            recommender_input_args_last_test = recommender_input_args.copy()
+            recommender_input_args_last_test.CONSTRUCTOR_POSITIONAL_ARGS[0] = URM_train_last_test
+        else:
+            recommender_input_args_last_test = None
 
-
+        ## Final step, after the hyperparameter range has been defined for each type of algorithm
+        parameterSearch.search(recommender_input_args,
+                               parameter_search_space=hyperparameters_range_dictionary,
+                               n_cases=n_cases,
+                               n_random_starts=n_random_starts,
+                               resume_from_saved=resume_from_saved,
+                               save_model=save_model,
+                               output_folder_path=output_folder_path,
+                               output_file_name_root=output_file_name_root,
+                               metric_to_optimize=metric_to_optimize,
+                               recommender_input_args_last_test=recommender_input_args_last_test)
 
     except Exception as e:
 

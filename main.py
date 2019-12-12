@@ -31,7 +31,7 @@ from utils.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
 # from SLIM_ElasticNet.SLIMElasticNetRecommender import SLIMElasticNetRecommender
 
 # Matrix Factorization
-# from MatrixFactorization.PureSVDRecommender import PureSVDRecommender
+from recommenders.PureSVDRecommender import PureSVDRecommender
 # from MatrixFactorization.IALSRecommender import IALSRecommender
 # from MatrixFactorization.NMFRecommender import NMFRecommender
 # from MatrixFactorization.Cython.MatrixFactorization_Cython import MatrixFactorization_BPR_Cython,\
@@ -95,8 +95,8 @@ evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10, 15])
 evaluator_validation_earlystopping = None  # EvaluatorHoldout(URM_train, cutoff_list=[5], exclude_seen = False)
 output_folder_path = "result_experiments/"
 
-n_cases = 2  # 8
-n_random_starts = 1  # 5
+n_cases = 8 # 2
+n_random_starts = 5 # 1
 
 save_model = "no"
 allow_weighting = False
@@ -112,7 +112,7 @@ collaborative_algorithm_list = [
     UserKNNCFRecommender,
     # MatrixFactorization_BPR_Cython,
     # MatrixFactorization_FunkSVD_Cython,
-    # PureSVDRecommender,
+    PureSVDRecommender,
     # SLIM_BPR_Cython,
     # SLIMElasticNetRecommender
 ]
@@ -136,7 +136,7 @@ while True:
         recommender_class = collaborative_algorithm_list[selected - 1]
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
-        # Collaborative recommenders
+        # Hyperparameters tuning
         if recommender_class in collaborative_algorithm_list:
 
             try:
@@ -158,10 +158,17 @@ while True:
                 print("On recommender {} Exception {}".format(recommender_class, str(e)))
                 traceback.print_exc()
 
-        # Get best_parameters for training
+
+        # Load best_parameters for training
+
+        if recommender_class in [ItemKNNCFRecommender, UserKNNCFRecommender]:
+            # KNN Recommenders on similarity_type
+            similarity_type = similarity_type_list[0]
+            output_file_name_root = recommender_class.RECOMMENDER_NAME + "_" + similarity_type + "_metadata.zip"
+        else:
+            output_file_name_root = recommender_class.RECOMMENDER_NAME + "_metadata.zip"
+
         data_loader = DataIO(folder_path=output_folder_path)
-                                # output_file_name_root + "_" + similarity_type,
-        output_file_name_root = recommender_class.RECOMMENDER_NAME + "_" + similarity_type_list[0] + "_metadata.zip"
         search_metadata = data_loader.load_data(output_file_name_root)
         best_parameters = search_metadata["hyperparameters_best"]  # dictionary with all the fit parameters
         print("best_parameters", best_parameters)
