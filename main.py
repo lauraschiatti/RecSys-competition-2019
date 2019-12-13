@@ -221,6 +221,7 @@ while True:
         best_parameters = search_metadata["hyperparameters_best"]  # dictionary with all the fit parameters
         print("best_parameters {}".format(best_parameters))
 
+
         # Fit the recommender with the parameters we just learned
         if recommender_class in content_algorithm_list:
             # todo: ICM_all or ICM_train?
