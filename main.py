@@ -161,30 +161,33 @@ while True:
 
 
         # Hyperparameters tuning
-        if recommender_class in collaborative_algorithm_list:
+        apply_hyperparams_tuning = False
 
-            try:
-                runParameterSearch_Collaborative(recommender_class=recommender_class,
-                                                 URM_train=URM_train,
-                                                 metric_to_optimize=metric_to_optimize,
-                                                 evaluator_validation=evaluator_validation,
-                                                 evaluator_test=evaluator_test,
-                                                 evaluator_validation_earlystopping=evaluator_validation_earlystopping,
-                                                 output_folder_path=output_folder_path,
-                                                 n_cases=n_cases,
-                                                 n_random_starts=n_random_starts,
-                                                 save_model=save_model,
-                                                 allow_weighting=allow_weighting,
-                                                 similarity_type_list=similarity_type_list)
+        if apply_hyperparams_tuning:
 
-                if recommender_class in [ItemKNNCFRecommender, UserKNNCFRecommender]:
-                    similarity_type = similarity_type_list[0]  # KNN Recommenders on similarity_type
-                    output_file_name_root = "{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
-                                                                        similarity_type)
+            if recommender_class in collaborative_algorithm_list:
+                try:
+                    runParameterSearch_Collaborative(recommender_class=recommender_class,
+                                                     URM_train=URM_train,
+                                                     metric_to_optimize=metric_to_optimize,
+                                                     evaluator_validation=evaluator_validation,
+                                                     evaluator_test=evaluator_test,
+                                                     evaluator_validation_earlystopping=evaluator_validation_earlystopping,
+                                                     output_folder_path=output_folder_path,
+                                                     n_cases=n_cases,
+                                                     n_random_starts=n_random_starts,
+                                                     save_model=save_model,
+                                                     allow_weighting=allow_weighting,
+                                                     similarity_type_list=similarity_type_list)
 
-            except Exception as e:
-                print("On recommender {} Exception {}".format(recommender_class, str(e)))
-                traceback.print_exc()
+                    if recommender_class in [ItemKNNCFRecommender, UserKNNCFRecommender]:
+                        similarity_type = similarity_type_list[0]  # KNN Recommenders on similarity_type
+                        output_file_name_root = "{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
+                                                                            similarity_type)
+
+                except Exception as e:
+                    print("On recommender {} Exception {}".format(recommender_class, str(e)))
+                    traceback.print_exc()
 
 
         if recommender_class in content_algorithm_list:
