@@ -2,7 +2,7 @@
 #  -*- coding: utf-8 -*-
 
 
-import os, traceback
+import traceback
 import numpy as np
 from utils.data_manager import build_URM, build_ICM, get_target_users
 from utils.Evaluation.Evaluator import EvaluatorHoldout
@@ -45,27 +45,19 @@ from recommenders.PureSVDRecommender import PureSVDRecommender
 ######################################################################
 from utils.KNN.ItemKNNCBFRecommender import ItemKNNCBFRecommender
 
-######################################################################
-##########                                                  ##########
-##########                 DATA LOADING                     ##########
-##########                                                  ##########
-######################################################################
+
+# Build URM, ICM and UCM
+# ----------------------
 
 URM_all = build_URM()
-
 ICM_all = build_ICM()
-
-# URM statistics
-# --------------
-
 # data_manager.get_statistics_URM(URM)
 
+# Cold items, cold users and cold features
+# URM, ICM = masks.refactor_URM_ICM(URM, ICM)
 
-######################################################################
-##########                                                  ##########
-##########      TRAINING, EVALUATION AND PREDICTIONS        ##########
-##########                                                  ##########
-######################################################################
+# Top-10 recommenders
+at = 10 # k recommended_items
 
 
 # URM train/validation/test splitting
@@ -73,34 +65,18 @@ ICM_all = build_ICM()
 
 # from Data_manager.Movielens1M.Movielens1MReader import Movielens1MReader
 # from Data_manager.DataSplitter_k_fold_stratified import DataSplitter_Warm_k_fold
-
+# todo: try splitting using get_holdout_split
 # dataset_object = Movielens1MReader()
 # dataSplitter = DataSplitter_Warm_k_fold(dataset_object)
 # dataSplitter.load_data()
 # URM_train, URM_validation, URM_test = dataSplitter.get_holdout_split()
-# todo: try splitting using get_holdout_split
+
 URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
 URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
 
-# Tuning parameters
-# -----------------
 
-metric_to_optimize = "MAP"
-
-evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[10])
-evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10, 15])
-evaluator_validation_earlystopping = None  # EvaluatorHoldout(URM_train, cutoff_list=[5], exclude_seen = False)
-output_folder_path = "result_experiments/"
-
-n_cases = 5 # 2
-n_random_starts = 2  # 1
-
-save_model = "no"
-allow_weighting = False #todo: try with feature_weighting
-similarity_type_list = ["cosine"]
-
-ICM_name = "ICM_all"
-
+# Recommenders
+# ------------
 
 # Collaborative recommenders
 collaborative_algorithm_list = [
@@ -110,7 +86,7 @@ collaborative_algorithm_list = [
     # RP3betaRecommender,
     ItemKNNCFRecommender,
     UserKNNCFRecommender,
-    # MatrixFactorization_BPR_Cython,
+#     MatrixFactorization_BPR_Cython,
     # MatrixFactorization_FunkSVD_Cython,
     PureSVDRecommender,
     # SLIM_BPR_Cython,
@@ -122,21 +98,33 @@ content_algorithm_list = [
     ItemKNNCBFRecommender
 ]
 
+# Hybrid recommenders
+hybrid_algorithm_list = [
+    # ItemKNNCBFRecommender +
+
+]
+
 recommender_list = [
+    # Non-personalized
     # Random,
     # TopPop,
+
+    # Collaborative recommenders
     # P3alphaRecommender,
     # RP3betaRecommender,
     ItemKNNCFRecommender,
     UserKNNCFRecommender,
-    # MatrixFactorization_BPR_Cython,
+#     MatrixFactorization_BPR_Cython,
     # MatrixFactorization_FunkSVD_Cython,
     PureSVDRecommender,
     # SLIM_BPR_Cython,
     # SLIMElasticNetRecommender,
-    ItemKNNCBFRecommender
-]
 
+    # Content-based recommenders
+    ItemKNNCBFRecommender,
+
+    # Hybrid recommenders
+]
 
 # from Utils.PoolWithSubprocess import PoolWithSubprocess
 # import multiprocessing
@@ -157,13 +145,31 @@ while True:
         recommender_class = recommender_list[selected - 1]
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
-        output_file_name_root = "{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME)
-
 
         # Hyperparameters tuning
-        apply_hyperparams_tuning = False
+        # ----------------------
+
+        apply_hyperparams_tuning = True
 
         if apply_hyperparams_tuning:
+
+            metric_to_optimize = "MAP"
+
+            evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[at])
+            evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[at, at+5])
+            evaluator_validation_earlystopping = None  # EvaluatorHoldout(URM_train, cutoff_list=[5], exclude_seen = False)
+            output_folder_path = "result_experiments/"
+
+            n_cases = 8  # 2
+            n_random_starts = 5  # 1
+
+            save_model = "no"
+            allow_weighting = True  # provides better results
+            similarity_type_list = ["cosine"]
+
+            ICM_name = "ICM_all"
+
+            output_file_name_root = "{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME)
 
             if recommender_class in collaborative_algorithm_list:
                 try:
@@ -190,29 +196,29 @@ while True:
                     traceback.print_exc()
 
 
-        if recommender_class in content_algorithm_list:
-            try:
-                runParameterSearch_Content(recommender_class=recommender_class,
-                                           URM_train=URM_train,
-                                           ICM_object=ICM_all,
-                                           ICM_name=ICM_name,
-                                           n_cases=n_cases,
-                                           n_random_starts=n_random_starts,
-                                           save_model=save_model,
-                                           evaluator_validation=evaluator_validation,
-                                           evaluator_test=evaluator_test,
-                                           metric_to_optimize=metric_to_optimize,
-                                           output_folder_path=output_folder_path,
-                                           allow_weighting=allow_weighting,
-                                           similarity_type_list=similarity_type_list)
+            if recommender_class in content_algorithm_list:
+                try:
+                    runParameterSearch_Content(recommender_class=recommender_class,
+                                               URM_train=URM_train,
+                                               ICM_object=ICM_all,
+                                               ICM_name=ICM_name,
+                                               n_cases=n_cases,
+                                               n_random_starts=n_random_starts,
+                                               save_model=save_model,
+                                               evaluator_validation=evaluator_validation,
+                                               evaluator_test=evaluator_test,
+                                               metric_to_optimize=metric_to_optimize,
+                                               output_folder_path=output_folder_path,
+                                               allow_weighting=allow_weighting,
+                                               similarity_type_list=similarity_type_list)
 
-                similarity_type = similarity_type_list[0]  # KNN Recommenders on similarity_type
-                output_file_name_root = "{}_{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
-                                                                       ICM_name, similarity_type)
+                    similarity_type = similarity_type_list[0]  # KNN Recommenders on similarity_type
+                    output_file_name_root = "{}_{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
+                                                                           ICM_name, similarity_type)
 
-            except Exception as e:
-                print("On recommender {} Exception {}".format(recommender_class, str(e)))
-                traceback.print_exc()
+                except Exception as e:
+                    print("On recommender {} Exception {}".format(recommender_class, str(e)))
+                    traceback.print_exc()
 
 
         # Load best_parameters for training
@@ -224,28 +230,25 @@ while True:
 
         # Fit the recommender with the parameters we just learned
         if recommender_class in content_algorithm_list:
-            # todo: ICM_all or ICM_train?
-            recommender = recommender_class(URM_train, ICM_all)
+            recommender = recommender_class(URM_train, ICM_all) # todo: ICM_all or ICM_train?
         else:
             recommender = recommender_class(URM_train)
 
         recommender.fit(**best_parameters)
 
         # Evaluate model
-        evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[10])
+        evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[at])
         result_dict, _ = evaluator_test.evaluateRecommender(recommender)
 
-        print("{} result_dict MAP {}".format(recommender_class.RECOMMENDER_NAME, result_dict[10]["MAP"]))
+        print("{} result_dict MAP {}".format(recommender_class.RECOMMENDER_NAME, result_dict[at]["MAP"]))
 
-        # Make predictions
-        predictions = input('\nCompute and save top10 predictions?: '
-                            'y - Yes  n - No\n')
+        # Generate predictions
+        predictions = input('\nCompute and save top10 predictions?: y - Yes  n - No\n')
 
         if predictions == 'y':
 
             # Train the model on the whole dataset using tuned params
             if recommender_class in content_algorithm_list:
-                # todo: ICM_all or ICM_train?
                 recommender = recommender_class(URM_all, ICM_all)
             else:
                 recommender = recommender_class(URM_all)
@@ -257,11 +260,11 @@ while True:
 
             for user_id in target_user_id_list:
                 item_list = ''
-                for item in range(10):  # recommended_items
-                    item_list = recommender.recommend(user_id, cutoff=10)
-                    item_list = np.array(item_list)  # list to np.array
 
-                    top_10_items[user_id] = item_list  # .strip() # remove trailing space
+                for item in range(at):
+                    item_list = recommender.recommend(user_id, cutoff=at)
+                    item_list = np.array(item_list)  # list to np.array
+                    top_10_items[user_id] = item_list
 
             # save predictions on csv file
             create_csv(top_10_items, recommender_class.RECOMMENDER_NAME)

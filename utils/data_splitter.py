@@ -8,7 +8,7 @@ Created on 23/04/2019
 import numpy as np
 import scipy.sparse as sps
 
-from data_manager import csr_sparse_matrix
+from utils.data_manager import csr_sparse_matrix
 
 # Train-Test splitting
 # Keep local split as similar as possible to online split (public split)
