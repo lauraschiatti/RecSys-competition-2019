@@ -22,6 +22,7 @@ from utils import masks
 # KNN
 from utils.KNN.UserKNNCFRecommender import UserKNNCFRecommender
 from utils.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
+from utils.KNN.ItemKNNSimilarityHybridRecommender import ItemKNNSimilarityHybridRecommender
 
 # from GraphBased.P3alphaRecommender import P3alphaRecommender
 # from GraphBased.RP3betaRecommender import RP3betaRecommender
@@ -44,7 +45,14 @@ from recommenders.PureSVDRecommender import PureSVDRecommender
 ##########                                                  ##########
 ######################################################################
 from utils.KNN.ItemKNNCBFRecommender import ItemKNNCBFRecommender
+# main.py
+# ------------------------------------------------------------------
 
+# !/usr/bin/env python3
+#  -*- coding: utf-8 -*-
+
+import traceback
+import numpy as np
 
 # Build URM, ICM and UCM
 # ----------------------
@@ -57,8 +65,7 @@ ICM_all = build_ICM()
 # URM, ICM = masks.refactor_URM_ICM(URM, ICM)
 
 # Top-10 recommenders
-at = 10 # k recommended_items
-
+at = 10  # k recommended_items
 
 # URM train/validation/test splitting
 # -----------------------------------
@@ -74,7 +81,6 @@ at = 10 # k recommended_items
 URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
 URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
 
-
 # Recommenders
 # ------------
 
@@ -86,7 +92,7 @@ collaborative_algorithm_list = [
     # RP3betaRecommender,
     ItemKNNCFRecommender,
     UserKNNCFRecommender,
-#     MatrixFactorization_BPR_Cython,
+    #     MatrixFactorization_BPR_Cython,
     # MatrixFactorization_FunkSVD_Cython,
     PureSVDRecommender,
     # SLIM_BPR_Cython,
@@ -101,7 +107,7 @@ content_algorithm_list = [
 # Hybrid recommenders
 hybrid_algorithm_list = [
     # ItemKNNCBFRecommender +
-
+    ItemKNNSimilarityHybridRecommender
 ]
 
 recommender_list = [
@@ -114,7 +120,7 @@ recommender_list = [
     # RP3betaRecommender,
     ItemKNNCFRecommender,
     UserKNNCFRecommender,
-#     MatrixFactorization_BPR_Cython,
+    #     MatrixFactorization_BPR_Cython,
     # MatrixFactorization_FunkSVD_Cython,
     PureSVDRecommender,
     # SLIM_BPR_Cython,
@@ -124,6 +130,7 @@ recommender_list = [
     ItemKNNCBFRecommender,
 
     # Hybrid recommenders
+    ItemKNNSimilarityHybridRecommender
 ]
 
 # from Utils.PoolWithSubprocess import PoolWithSubprocess
@@ -145,7 +152,6 @@ while True:
         recommender_class = recommender_list[selected - 1]
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
-
         # Hyperparameters tuning
         # ----------------------
 
@@ -156,7 +162,7 @@ while True:
             metric_to_optimize = "MAP"
 
             evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[at])
-            evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[at, at+5])
+            evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[at, at + 5])
             evaluator_validation_earlystopping = None  # EvaluatorHoldout(URM_train, cutoff_list=[5], exclude_seen = False)
             output_folder_path = "result_experiments/"
 
@@ -195,7 +201,6 @@ while True:
                     print("On recommender {} Exception {}".format(recommender_class, str(e)))
                     traceback.print_exc()
 
-
             if recommender_class in content_algorithm_list:
                 try:
                     runParameterSearch_Content(recommender_class=recommender_class,
@@ -219,22 +224,68 @@ while True:
                 except Exception as e:
                     print("On recommender {} Exception {}".format(recommender_class, str(e)))
                     traceback.print_exc()
+                # Load best_parameters for training
+                data_loader = DataIO(folder_path=output_folder_path)
+                search_metadata = data_loader.load_data(output_file_name_root)
+                best_parameters = search_metadata["hyperparameters_best"]  # dictionary with all the fit parameters
+                print("best_parameters {}".format(best_parameters))
 
+            if recommender_class in hybrid_algorithm_list:
+                print("HYBRID!!!")
+                try:
+                    runParameterSearch_Content(recommender_class=recommender_class,
+                                               URM_train=URM_train,
+                                               ICM_object=ICM_all,
+                                               ICM_name=ICM_name,
+                                               n_cases=n_cases,
+                                               n_random_starts=n_random_starts,
+                                               save_model=save_model,
+                                               evaluator_validation=evaluator_validation,
+                                               evaluator_test=evaluator_test,
+                                               metric_to_optimize=metric_to_optimize,
+                                               output_folder_path=output_folder_path,
+                                               allow_weighting=allow_weighting,
+                                               similarity_type_list=similarity_type_list)
 
-        # Load best_parameters for training
-        data_loader = DataIO(folder_path=output_folder_path)
-        search_metadata = data_loader.load_data(output_file_name_root)
-        best_parameters = search_metadata["hyperparameters_best"]  # dictionary with all the fit parameters
-        print("best_parameters {}".format(best_parameters))
+                    similarity_type = similarity_type_list[0]  # KNN Recommenders on similarity_type
+                    output_file_name_root = "{}_{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
+                                                                           ICM_name, similarity_type)
 
+                except Exception as e:
+                    print("On recommender {} Exception {}".format(recommender_class, str(e)))
+                    traceback.print_exc()
+                # Load best_parameters for training
+                data_loader = DataIO(folder_path=output_folder_path)
+                search_metadata = data_loader.load_data(output_file_name_root)
+                best_parameters = search_metadata["hyperparameters_best"]  # dictionary with all the fit parameters
+                print("best_parameters {}".format(best_parameters))
+        else:
+            best_parameters = {'sgd_mode': 'adagrad', 'epochs': 1500, 'num_factors': 177, 'batch_size': 4,
+                               'positive_reg': 2.3859950782265896e-05, 'negative_reg': 7.572911338047984e-05,
+                               'learning_rate': 0.0005586331284886803}
 
         # Fit the recommender with the parameters we just learned
-        if recommender_class in content_algorithm_list:
-            recommender = recommender_class(URM_train, ICM_all) # todo: ICM_all or ICM_train?
+
+        if recommender_class in hybrid_algorithm_list:
+            itemKNNCF = ItemKNNCFRecommender(URM_train)
+            best_parameters = {'topK': 6, 'shrink': 179, 'similarity': 'cosine', 'normalize': True,
+                               'feature_weighting': 'BM25'}
+            itemKNNCF.fit(**best_parameters)
+
+            itemKNNCBF = ItemKNNCBFRecommender(URM_train, ICM_all)
+            best_parameters = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
+                               'feature_weighting': 'none'}
+            itemKNNCBF.fit(**best_parameters)
+
+            recommender = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
+            recommender.fit(alpha=0.5)
+
+        elif recommender_class in content_algorithm_list:
+            recommender = recommender_class(URM_train, ICM_all)  # todo: ICM_all or ICM_train?
+            recommender.fit(**best_parameters)
         else:
             recommender = recommender_class(URM_train)
-
-        recommender.fit(**best_parameters)
+            recommender.fit(**best_parameters)
 
         # Evaluate model
         evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[at])
