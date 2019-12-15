@@ -52,22 +52,22 @@ def refactor_URM_ICM(URM, ICM):
     print("ICM.shape", ICM.shape)
 
     # Keep the warm_items and warm_users array, we might need them in future
-    # warm_items_mask = np.ediff1d(URM.tocsc().indptr) > 0
-    # warm_items = np.arange(URM.shape[1])[warm_items_mask]
-    # URM = URM[:, warm_items]
-    # warm_users_mask = np.ediff1d(URM.tocsr().indptr) > 0
-    # warm_users = np.arange(URM.shape[0])[warm_users_mask]
-    # URM = URM[warm_users, :]
+    warm_items_mask = np.ediff1d(URM.tocsc().indptr) > 0
+    warm_items = np.arange(URM.shape[1])[warm_items_mask]
+    URM = URM[:, warm_items]
+    warm_users_mask = np.ediff1d(URM.tocsr().indptr) > 0
+    warm_users = np.arange(URM.shape[0])[warm_users_mask]
+    URM = URM[warm_users, :]
 
     # Keep only warm_items and warm_features in the ICM
-    # ICM = ICM[warm_items, :]
-    # ICM = ICM.tocsr()
-    #
-    # warm_features_mask = np.ediff1d(ICM.tocsc().indptr) > 0
-    # warm_features = np.arange(ICM.shape[1])[warm_features_mask]
-    #
-    # ICM = ICM[:, warm_features]
-    # ICM = ICM.tocsr()
+    ICM = ICM[warm_items, :]
+    ICM = ICM.tocsr()
+
+    warm_features_mask = np.ediff1d(ICM.tocsc().indptr) > 0
+    warm_features = np.arange(ICM.shape[1])[warm_features_mask]
+
+    ICM = ICM[:, warm_features]
+    ICM = ICM.tocsr()
 
     # There could be items with no features
     nofeatures_items_mask = np.ediff1d(ICM.tocsr().indptr) < 3 #<=0
@@ -90,7 +90,5 @@ def refactor_URM_ICM(URM, ICM):
     URM = URM[warm_users_2, :]
     URM = URM.tocsr()
 
-    print("ICM.shape without warm_items", ICM.shape)
-    print("URM.shape without warm_items", URM.shape)
 
     return URM, ICM
