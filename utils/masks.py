@@ -90,7 +90,4 @@ def refactor_URM_ICM(URM, ICM):
     URM = URM[warm_users_2, :]
     URM = URM.tocsr()
 
-    print("ICM.shape without warm_items", ICM.shape)
-    print("URM.shape without warm_items", URM.shape)
-
     return URM, ICM

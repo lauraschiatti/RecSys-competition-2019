@@ -9,6 +9,7 @@ from utils.Evaluation.Evaluator import EvaluatorHoldout
 from utils.ParameterTuning.hyperparameter_search import runParameterSearch_Collaborative, runParameterSearch_Content
 from utils.DataIO import DataIO
 from utils.create_submission_file import create_csv
+from utils.data_splitter import split_train_leave_k_out_user_wise
 from utils.data_splitter import split_train_validation_random_holdout
 from utils import masks
 
@@ -71,9 +72,11 @@ at = 10 # k recommended_items
 # dataSplitter.load_data()
 # URM_train, URM_validation, URM_test = dataSplitter.get_holdout_split()
 
-URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
-URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
+# URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
+# URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
 
+URM_train, URM_test = split_train_leave_k_out_user_wise(URM_all, k_out = 1, use_validation_set = False, leave_random_out = True)
+URM_train, URM_validation = split_train_leave_k_out_user_wise(URM_all, k_out = 1, use_validation_set = False, leave_random_out = True)
 
 # Recommenders
 # ------------
