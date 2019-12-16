@@ -5,11 +5,7 @@ Created on 22/11/17
 @author: Maurizio Ferrari Dacrema
 """
 
-# Automate hyperparameter tuning
-# using bayesian optimization with scikit-optimize
-# -------------------------------------------------
-
-import os, multiprocessing
+import os
 from functools import partial
 
 ######################################################################
@@ -17,15 +13,19 @@ from functools import partial
 ##########                  PURE COLLABORATIVE              ##########
 ##########                                                  ##########
 ######################################################################
-# from Base.NonPersonalizedRecommender import TopPop, Random, GlobalEffects
+# Non-Personalized
+from recommenders.RandomRecommender import  RandomRecommender
+from recommenders.TopPopRecommender import TopPopRecommender
 
 # KNN
-from utils.KNN.UserKNNCFRecommender import UserKNNCFRecommender
-from utils.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
+from recommenders.KNN.UserKNNCFRecommender import UserKNNCFRecommender
+from recommenders.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
+
+# Graph-based
 # from GraphBased.P3alphaRecommender import P3alphaRecommender
 # from GraphBased.RP3betaRecommender import RP3betaRecommender
 
-# KNN machine learning
+# KNN Machine Learning
 # from SLIM_BPR.Cython.SLIM_BPR_Cython import SLIM_BPR_Cython
 # from SLIM_ElasticNet.SLIMElasticNetRecommender import SLIMElasticNetRecommender
 
@@ -42,9 +42,7 @@ from recommenders.PureSVDRecommender import PureSVDRecommender
 ##########                  PURE CONTENT BASED              ##########
 ##########                                                  ##########
 ######################################################################
-from utils.KNN.ItemKNNCBFRecommender import ItemKNNCBFRecommender
-
-
+from recommenders.KNN.ItemKNNCBFRecommender import ItemKNNCBFRecommender
 
 ######################################################################
 from skopt.space import Real, Integer, Categorical
@@ -53,7 +51,6 @@ import traceback
 
 
 from utils.ParameterTuning.SearchBayesianSkopt import SearchBayesianSkopt
-from utils.ParameterTuning.searchSingleCase import SearchSingleCase
 from utils.ParameterTuning.SearchAbstractClass import SearchInputRecommenderArgs
 
 
