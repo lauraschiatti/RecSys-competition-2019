@@ -52,6 +52,7 @@ import traceback
 
 from utils.ParameterTuning.SearchBayesianSkopt import SearchBayesianSkopt
 from utils.ParameterTuning.SearchAbstractClass import SearchInputRecommenderArgs
+from utils.ParameterTuning.searchSingleCase import SearchSingleCase
 
 
 def run_KNNRecommender_on_similarity_type(similarity_type, parameterSearch,
@@ -209,7 +210,8 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
                                               evaluator_validation=evaluator_validation,
                                               evaluator_test=evaluator_test)
 
-        # if recommender_class in [TopPop, GlobalEffects, Random]:
+
+        # if recommender_class in [TopPopRecommender, RandomRecommender, GlobalEffectsRecommender]:
         #     """
         #     TopPop, GlobalEffects and Random have no parameters therefore only one evaluation is needed
         #     """

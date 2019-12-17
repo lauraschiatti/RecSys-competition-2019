@@ -4,11 +4,12 @@
 import traceback
 import numpy as np
 from utils.data_manager import build_URM, build_ICM, get_target_users
+from utils.evaluation import evaluate_algorithm
 from utils.Evaluation.Evaluator import EvaluatorHoldout
 from utils.ParameterTuning.hyperparameter_search import runParameterSearch_Collaborative, runParameterSearch_Content
 from utils.DataIO import DataIO
 from utils.create_submission_file import create_csv
-from utils.data_splitter import split_train_validation_random_holdout
+from utils.data_splitter import split_train_validation_random_holdout, split_train_leave_k_out_user_wise
 
 ######################################################################
 ##########                                                  ##########
@@ -16,7 +17,7 @@ from utils.data_splitter import split_train_validation_random_holdout
 ##########                                                  ##########
 ######################################################################
 # Non-Personalized
-from recommenders.RandomRecommender import  RandomRecommender
+from recommenders.RandomRecommender import RandomRecommender
 from recommenders.TopPopRecommender import TopPopRecommender
 # Global effects not implemented for implicit ratings
 
@@ -65,25 +66,39 @@ at = 10  # k recommended_items
 # URM train/validation/test splitting
 # -----------------------------------
 
-URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
-URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
+# URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
+# URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
 
-# URM_train, URM_test = split_train_leave_k_out_user_wise(URM_all, k_out = 1, use_validation_set = False, leave_random_out = True)
-# URM_train, URM_validation = split_train_leave_k_out_user_wise(URM_all, k_out = 1, use_validation_set = False, leave_random_out = True)
+URM_train, URM_test = split_train_leave_k_out_user_wise(URM_all,
+                                                        k_out=1,
+                                                        use_validation_set=False,
+                                                        leave_random_out=True)
 
+URM_train, URM_validation = split_train_leave_k_out_user_wise(URM_train,
+                                                              k_out=1,
+                                                              use_validation_set=False,
+                                                              leave_random_out=True)
 
 # Recommenders
 # ------------
 
-# Collaborative recommenders
-collaborative_algorithm_list = [
-    # Random,
-    # TopPop,
+# Non-personalized recommenders
+non_personalized_list = [
+    RandomRecommender,
+    TopPopRecommender
+]
+
+# Graph-based recommenders
+graph_algorithm_list = [
     # P3alphaRecommender,
     # RP3betaRecommender,
+]
+
+# Collaborative recommenders
+collaborative_algorithm_list = [
     ItemKNNCFRecommender,
     UserKNNCFRecommender,
-#     MatrixFactorization_BPR_Cython,
+    #     MatrixFactorization_BPR_Cython,
     # MatrixFactorization_FunkSVD_Cython,
     PureSVDRecommender,
     # SLIM_BPR_Cython,
@@ -103,12 +118,14 @@ hybrid_algorithm_list = [
 
 recommender_list = [
     # Non-personalized
-    # RandomRecommender,
-    # TopPopRecommender,
+    RandomRecommender,
+    TopPopRecommender,
 
-    # Collaborative recommenders
+    # Graph-based recommenders
     # P3alphaRecommender,
     # RP3betaRecommender,
+
+    # Collaborative recommenders
     ItemKNNCFRecommender,
     UserKNNCFRecommender,
 
@@ -142,6 +159,7 @@ best_parameters_list = {
 
 }
 
+
 # from Utils.PoolWithSubprocess import PoolWithSubprocess
 # import multiprocessing
 #
@@ -151,10 +169,8 @@ best_parameters_list = {
 # pool.join()
 
 def read_data_split_and_search(recommender_class):
-
-
-
     return best_parameters
+
 
 print('\nRecommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -178,7 +194,7 @@ while True:
 
             evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[at])
             evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[at, at + 5])
-            evaluator_validation_earlystopping = EvaluatorHoldout(URM_train, cutoff_list=[at], exclude_seen = False)
+            evaluator_validation_earlystopping = EvaluatorHoldout(URM_train, cutoff_list=[at], exclude_seen=False)
             output_folder_path = "result_experiments/"
 
             n_cases = 8  # 2
@@ -192,7 +208,7 @@ while True:
 
             output_file_name_root = "{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME)
 
-            if recommender_class in collaborative_algorithm_list:
+            if recommender_class in [non_personalized_list, collaborative_algorithm_list]:
                 try:
                     runParameterSearch_Collaborative(recommender_class=recommender_class,
                                                      URM_train=URM_train,
@@ -216,7 +232,7 @@ while True:
                     print("On recommender {} Exception {}".format(recommender_class, str(e)))
                     traceback.print_exc()
 
-            if recommender_class in [content_algorithm_list]: #, hybrid_algorithm_list]:
+            elif recommender_class in [content_algorithm_list]:  # , hybrid_algorithm_list]:
                 try:
                     runParameterSearch_Content(recommender_class=recommender_class,
                                                URM_train=URM_train,
@@ -246,6 +262,7 @@ while True:
                 best_parameters = search_metadata["hyperparameters_best"]  # dictionary with all the fit parameters
                 print("best_parameters {}".format(best_parameters))
 
+
         else:
             try:
                 best_parameters = best_parameters_list[recommender_class.RECOMMENDER_NAME]
@@ -254,11 +271,13 @@ while True:
                 print("best_parameters not found on recommender {} Exception {}".format(recommender_class, str(e)))
                 traceback.print_exc()
 
-
         # Fit the recommender with the hyperparameters we just learned
         # -------------------------------------------------------
 
-        if recommender_class in content_algorithm_list:
+        if recommender_class in non_personalized_list:
+            recommender = recommender_class(URM_train)
+            recommender.fit()
+        elif recommender_class in content_algorithm_list:
             recommender = recommender_class(URM_train, ICM_all)  # todo: ICM_all or ICM_train?
             recommender.fit(**best_parameters)
         else:
@@ -279,12 +298,15 @@ while True:
         if predictions == 'y':
 
             # Train the model on the whole dataset using tuned params
-            if recommender_class in content_algorithm_list:
+            if recommender_class in non_personalized_list:
+                recommender = recommender_class(URM_all)
+                recommender.fit()
+            elif recommender_class in content_algorithm_list:
                 recommender = recommender_class(URM_all, ICM_all)
+                recommender.fit(**best_parameters)
             else:
                 recommender = recommender_class(URM_all)
-
-            recommender.fit(**best_parameters)
+                recommender.fit(**best_parameters)
 
             top_10_items = {}
             target_user_id_list = get_target_users()

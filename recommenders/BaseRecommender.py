@@ -5,7 +5,6 @@
 """
 
 import numpy as np
-
 from utils.compute_similarity import check_matrix
 
 class BaseRecommender(object):
@@ -85,7 +84,6 @@ class BaseRecommender(object):
         scores_batch[:, self.items_to_ignore_ID] = -np.inf
         return scores_batch
 
-
     def _remove_seen_on_scores(self, user_id, scores):
 
         assert self.URM_train.getformat() == "csr", "Recommender_Base_Class: URM_train is not CSR, this will cause errors in filtering seen items"
@@ -128,6 +126,8 @@ class BaseRecommender(object):
 
             user_id = user_id_array[user_index]
 
+            # seen items: those the user already interacted with
+            #  always remove seen items if your purpose is to recommend "new" ones
             if remove_seen_flag:
                 scores_batch[user_index,:] = self._remove_seen_on_scores(user_id, scores_batch[user_index, :])
 

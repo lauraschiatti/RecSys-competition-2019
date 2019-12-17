@@ -14,15 +14,15 @@ from utils.data_manager import csr_sparse_matrix
 # Keep local split as similar as possible to online split (public split)
 # ----------------------------------------------------------------------
 
-# Leave One Out split:
-# leave out one interaction/user ==> suggested for local split
-def split_train_leave_k_out_user_wise(URM, k_out=1, use_validation_set=True, leave_random_out=True):
+# Leave One Out split: leave out one interaction/user ==> suggested for local split
+
+def split_train_leave_k_out_user_wise(URM, k_out = 1, use_validation_set = True, leave_random_out = True):
     """
     The function splits an URM in two matrices selecting the k_out interactions one user at a time
     :param URM:
     :param k_out:
     :param use_validation_set:
-    :param leave_random_out: leave out a random interaction
+    :param leave_random_out:
     :return:
     """
 
@@ -31,22 +31,26 @@ def split_train_leave_k_out_user_wise(URM, k_out=1, use_validation_set=True, lea
     URM = sps.csr_matrix(URM)
     n_users, n_items = URM.shape
 
-    URM_train_builder = IncrementalSparseMatrix(auto_create_row_mapper=False, n_rows=n_users,
-                                                auto_create_col_mapper=False, n_cols=n_items)
 
-    URM_test_builder = IncrementalSparseMatrix(auto_create_row_mapper=False, n_rows=n_users,
-                                               auto_create_col_mapper=False, n_cols=n_items)
+    URM_train_builder = IncrementalSparseMatrix(auto_create_row_mapper=False, n_rows = n_users,
+                                        auto_create_col_mapper=False, n_cols = n_items)
+
+    URM_test_builder = IncrementalSparseMatrix(auto_create_row_mapper=False, n_rows = n_users,
+                                        auto_create_col_mapper=False, n_cols = n_items)
 
     if use_validation_set:
-        URM_validation_builder = IncrementalSparseMatrix(auto_create_row_mapper=False, n_rows=n_users,
-                                                         auto_create_col_mapper=False, n_cols=n_items)
+         URM_validation_builder = IncrementalSparseMatrix(auto_create_row_mapper=False, n_rows = n_users,
+                                                          auto_create_col_mapper=False, n_cols = n_items)
+
+
 
     for user_id in range(n_users):
 
         start_user_position = URM.indptr[user_id]
-        end_user_position = URM.indptr[user_id + 1]
+        end_user_position = URM.indptr[user_id+1]
 
         user_profile = URM.indices[start_user_position:end_user_position]
+
 
         if leave_random_out:
             indices_to_suffle = np.arange(len(user_profile), dtype=np.int)
@@ -66,41 +70,42 @@ def split_train_leave_k_out_user_wise(URM, k_out=1, use_validation_set=True, lea
             user_interaction_items = user_profile[sort_interaction_index]
             user_interaction_data = URM.data[start_user_position:end_user_position][sort_interaction_index]
 
-        # Test interactions
+
+        #Test interactions
         user_interaction_items_test = user_interaction_items[0:k_out]
         user_interaction_data_test = user_interaction_data[0:k_out]
 
-        URM_test_builder.add_data_lists([user_id] * len(user_interaction_items_test), user_interaction_items_test,
-                                        user_interaction_data_test)
+        URM_test_builder.add_data_lists([user_id]*len(user_interaction_items_test), user_interaction_items_test, user_interaction_data_test)
 
-        # validation interactions
+
+        #validation interactions
         if use_validation_set:
-            user_interaction_items_validation = user_interaction_items[k_out:k_out * 2]
-            user_interaction_data_validation = user_interaction_data[k_out:k_out * 2]
+            user_interaction_items_validation = user_interaction_items[k_out:k_out*2]
+            user_interaction_data_validation = user_interaction_data[k_out:k_out*2]
 
-            # print(user_interaction_items_validation[0])
-            print(user_interaction_data_validation[0])
+            URM_validation_builder.add_data_lists([user_id]*k_out, user_interaction_items_validation, user_interaction_data_validation)
 
-            URM_validation_builder.add_data_lists([user_id] * k_out, user_interaction_items_validation,
-                                                  user_interaction_data_validation)
 
-        # Train interactions
-        user_interaction_items_train = user_interaction_items[k_out * 2:]
-        user_interaction_data_train = user_interaction_data[k_out * 2:]
 
-        URM_train_builder.add_data_lists([user_id] * len(user_interaction_items_train), user_interaction_items_train,
-                                         user_interaction_data_train)
+        #Train interactions
+        user_interaction_items_train = user_interaction_items[k_out*2:]
+        user_interaction_data_train = user_interaction_data[k_out*2:]
+
+        URM_train_builder.add_data_lists([user_id]*len(user_interaction_items_train), user_interaction_items_train, user_interaction_data_train)
+
+
 
     URM_train = URM_train_builder.get_SparseMatrix()
     URM_test = URM_test_builder.get_SparseMatrix()
+
 
     URM_train = sps.csr_matrix(URM_train)
     user_no_item_train = np.sum(np.ediff1d(URM_train.indptr) == 0)
 
     if user_no_item_train != 0:
-        print("Warning: {} ({:.2f} %) of {} users have no Train items".format(user_no_item_train,
-                                                                              user_no_item_train / n_users * 100,
-                                                                              n_users))
+        print("Warning: {} ({:.2f} %) of {} users have no Train items".format(user_no_item_train, user_no_item_train/n_users*100, n_users))
+
+
 
     if use_validation_set:
         URM_validation = URM_validation_builder.get_SparseMatrix()
@@ -109,13 +114,14 @@ def split_train_leave_k_out_user_wise(URM, k_out=1, use_validation_set=True, lea
         user_no_item_validation = np.sum(np.ediff1d(URM_validation.indptr) == 0)
 
         if user_no_item_validation != 0:
-            print("Warning: {} ({:.2f} %) of {} users have no Validation items"
-                  .format(user_no_item_validation, user_no_item_validation / n_users * 100, n_users))
+            print("Warning: {} ({:.2f} %) of {} users have no Validation items".format(user_no_item_validation, user_no_item_validation/n_users*100, n_users))
+
 
         return URM_train, URM_validation, URM_test
 
-    print(URM_train.shape)
+
     return URM_train, URM_test
+
 
 # Random holdout split: take interactions randomly
 # and do not care about which users were involved in that interaction
@@ -145,76 +151,6 @@ def split_train_validation_random_holdout(URM, train_split):
 
     return URM_train, URM_test
 
-
-def _verify_data_consistency(self):
-    self._assert_is_initialized()
-
-    print_preamble = "{} consistency check: ".format(self.DATA_SPLITTER_NAME)
-
-    URM_to_load_list = ["URM_train", "URM_test"]
-
-    if self.use_validation_set:
-        URM_to_load_list.append("URM_validation")
-
-    assert len(self.SPLIT_URM_DICT) == len(URM_to_load_list), \
-        print_preamble + "The available URM are not as many as they are supposed to be. URMs are {}, expected URMs are {}".format(
-            len(self.SPLIT_URM_DICT), len(URM_to_load_list))
-
-    assert all(URM_name in self.SPLIT_URM_DICT for URM_name in
-               URM_to_load_list), print_preamble + "Not all URMs have been created"
-    assert all(URM_name in URM_to_load_list for URM_name in
-               self.SPLIT_URM_DICT.keys()), print_preamble + "The split contains URMs that should not exist"
-
-    URM_shape = None
-
-    for URM_name, URM_object in self.SPLIT_URM_DICT.items():
-
-        if URM_shape is None:
-            URM_shape = URM_object.shape
-
-            n_users, n_items = URM_shape
-
-            assert n_users != 0, print_preamble + "Number of users in URM is 0"
-            assert n_items != 0, print_preamble + "Number of items in URM is 0"
-
-        assert URM_shape == URM_object.shape, print_preamble + "URM shape is inconsistent"
-
-    assert self.SPLIT_URM_DICT["URM_train"].nnz != 0, print_preamble + "Number of interactions in URM Train is 0"
-    assert self.SPLIT_URM_DICT["URM_test"].nnz != 0, print_preamble + "Number of interactions in URM Test is 0"
-
-    URM = self.SPLIT_URM_DICT["URM_test"].copy()
-    user_interactions = np.ediff1d(sps.csr_matrix(URM).indptr)
-
-    assert np.all(
-        user_interactions == self.k_out_value), print_preamble + "Not all users have the desired number of interactions in URM_test, {} users out of {}".format(
-        (user_interactions != self.k_out_value).sum(), n_users)
-
-    if self.use_validation_set:
-        assert self.SPLIT_URM_DICT[
-                   "URM_validation"].nnz != 0, print_preamble + "Number of interactions in URM Validation is 0"
-
-        URM = self.SPLIT_URM_DICT["URM_validation"].copy()
-        user_interactions = np.ediff1d(sps.csr_matrix(URM).indptr)
-
-        assert np.all(
-            user_interactions == self.k_out_value), print_preamble + "Not all users have the desired number of interactions in URM_validation, {} users out of {}".format(
-            (user_interactions != self.k_out_value).sum(), n_users)
-
-    URM = self.SPLIT_URM_DICT["URM_train"].copy()
-    user_interactions = np.ediff1d(sps.csr_matrix(URM).indptr)
-
-    if not self.allow_cold_users:
-        assert np.all(
-            user_interactions != 0), print_preamble + "Cold users exist despite not being allowed as per DataSplitter parameters, {} users out of {}".format(
-            (user_interactions == 0).sum(), n_users)
-
-    assert assert_disjoint_matrices(list(self.SPLIT_URM_DICT.values()))
-
-    assert_URM_ICM_mapper_consistency(URM_DICT=self.SPLIT_URM_DICT,
-                                      GLOBAL_MAPPER_DICT=self.SPLIT_GLOBAL_MAPPER_DICT,
-                                      ICM_DICT=self.SPLIT_ICM_DICT,
-                                      ICM_MAPPER_DICT=self.SPLIT_ICM_MAPPER_DICT,
-                                      DATA_SPLITTER_NAME=self.DATA_SPLITTER_NAME)
 
 
 class IncrementalSparseMatrix_ListBased(object):

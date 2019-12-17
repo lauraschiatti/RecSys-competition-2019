@@ -94,7 +94,7 @@ while True:
 
         elif recomm_type == 'TopPopRecommender':
             recommender = TopPopRecommender.TopPopRecommender()
-            recommender.fit(URM_train)
+            recommender.fit()
 
         # Content-based filtering
         # elif recomm_type == 'ItemCBFKNNRecommender':
