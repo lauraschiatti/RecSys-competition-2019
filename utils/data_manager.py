@@ -345,7 +345,6 @@ def top_5_percept_popular_items(URM):
     return ten_perc_pop
 
 
-
 def item_feature_ratios(ICM):
     # Features per item
     ICM = sps.csr_matrix(ICM)
