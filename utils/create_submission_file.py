@@ -7,28 +7,32 @@
 
 import os
 from datetime import datetime
+import numpy as np
 
 
-def create_csv(top_10_items, recommender):
+def create_csv(user_id_array, item_list, recommender_name):
     print("\nGenerating submission csv ... ")
 
     # save on a different dir according to the recommender used
-    submissions_dir = './submissions/' + recommender
+    submissions_dir = './submissions/' + recommender_name
 
     # If directory for the recommender does not exist, create
     if not os.path.exists(submissions_dir):
         os.makedirs(submissions_dir)
 
-    csv_fname = 'submission_'
-    csv_fname += datetime.now().strftime('%b%d_%H-%M-%S') + '.csv'
+    csv_fname = 'submission_' + datetime.now().strftime('%b%d_%H-%M-%S') + '.csv'
+    csv_file = os.path.join(submissions_dir, csv_fname)
 
-    file_path = os.path.join(submissions_dir, csv_fname)
+    # field names
+    header = ['user_id', 'item_list']
 
-    with open(file_path, 'w') as f:
+    # data rows of csv file
+    items_by_user = list(zip(user_id_array, item_list))  # zip list
 
+    with open(csv_file, 'w', newline='') as file:
         fieldnames = 'user_id,item_list'
-        f.write(fieldnames + '\n')
+        file.write(fieldnames + '\n')
 
-        for user_id, item_list in top_10_items.items():
-            row = str(user_id) + ',' + str(item_list) + '\n'
-            f.write(row.replace('[', '').replace(']', ''))  # remove '[' ']' from item_list string
+        for item_list in items_by_user:
+            row = str(item_list[0]) + ',' + str(np.array(item_list[1])) + '\n'
+            file.write(row.replace('[', '').replace(']', ''))  # remove '[' ']' from item_list string

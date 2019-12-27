@@ -172,7 +172,6 @@ class BaseRecommender(object):
             ranking_list[user_index] = user_recommendation_list.tolist()
 
 
-
         # Return single list for one user, instead of list of lists
         if single_user:
             ranking_list = ranking_list[0]
