@@ -136,7 +136,7 @@ content_algorithm_list = [
 # Hybrid recommenders
 hybrid_algorithm_list = [
     ItemKNNSimilarityHybridRecommender,  # Linear combination of item-based models
-    CFW_D_Similarity_Linalg,
+    CFW_D_Similarity_Linalg, # regression problem using linalg solver
     ItemKNNScoresHybridRecommender  # Linear combination of predictions
 ]
 
@@ -309,7 +309,48 @@ best_parameters_list = {
 
 ################################################################################################################
 
-# exit(0)
+# LightFM's hybrid model
+
+# Import the model
+from lightfm import LightFM
+from lightfm.evaluation import precision_at_k, auc_score
+
+# Set the number of threads; you can increase this
+# ify you have more physical cores available.
+# NUM_THREADS = 2
+# NUM_COMPONENTS = 30
+# NUM_EPOCHS = 3
+# ITEM_ALPHA = 1e-6
+#
+# # Define a new model instance
+# model = LightFM(loss='warp',
+#                 item_alpha=ITEM_ALPHA,
+#                 no_components=NUM_COMPONENTS)
+#
+# # Fit the hybrid model. Note that this time, we pass
+# # in the item features matrix.
+# model = model.fit(URM_train,
+#                 # item_features=item_features,
+#                 epochs=NUM_EPOCHS,
+#                 num_threads=NUM_THREADS)
+#
+# # Evaluate the trained model
+# train_precision = precision_at_k(model,
+#                                 URM_train,
+#                                 k=cutoff,
+#                                 num_threads=NUM_THREADS).mean()
+#
+# test_precision = precision_at_k(model,
+#                                 URM_test,
+#                                 k=cutoff,
+#                                 num_threads=NUM_THREADS).mean()
+#
+#
+# print('Precision: train %.5f, test %.5f.' % (train_precision, test_precision))
+# print('AUC: train %.5f, test %.5f.' % (train_auc, test_auc))
+
+
+################################################################################################################
 
 
 print('\nRecommender Systems: ')
@@ -338,7 +379,7 @@ while True:
             output_folder_path = "result_experiments/"
 
             n_cases = 8  # 2
-            n_random_starts = 5  # 1
+            n_random_starts = 5  # int(n_cases / 3)
 
             save_model = "no"
             allow_weighting = True  # provides better results
@@ -418,27 +459,75 @@ while True:
             recommender = recommender_class(URM_train)
             recommender.fit()
 
+        elif recommender_class in content_algorithm_list:
+            recommender = recommender_class(URM_train, ICM_all)  # todo: ICM_all or ICM_train?
+            recommender.fit(**best_parameters)
+
         elif recommender_class is ItemKNNSimilarityHybridRecommender:
             itemKNNCF = ItemKNNCFRecommender(URM_train)
-            best_parameters = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-                               'feature_weighting': 'none'}
-            itemKNNCF.fit(**best_parameters)
+            best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
+                                         'feature_weighting': 'none'}
+            itemKNNCF.fit(**best_parameters_itemKNNCF)
 
             itemKNNCBF = ItemKNNCBFRecommender(URM_train, ICM_all)
             best_parameters = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
                                'feature_weighting': 'none'}
             itemKNNCBF.fit(**best_parameters)
 
-            recommender = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
+            recommender = recommender_class(URM_train, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
             recommender.fit(alpha=0.8)
 
         elif recommender_class is CFW_D_Similarity_Linalg:
+            # feature weighting techniques
             itemKNNCF = ItemKNNCFRecommender(URM_train)
             best_parameters = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
                                'feature_weighting': 'none'}
             itemKNNCF.fit(**best_parameters)
 
-            recommender = CFW_D_Similarity_Linalg(URM_train, ICM_all, itemKNNCF.W_sparse)
+            W_sparse_CF = itemKNNCF.W_sparse
+
+            # hyperparams tuning
+            # if recommender_class is CFW_D_Similarity_Linalg:
+            #     hyperparameters_range_dictionary = {}
+            #     hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
+            #     hyperparameters_range_dictionary["add_zeros_quota"] = Real(low=0, high=1, prior='uniform')
+            #     hyperparameters_range_dictionary["normalize_similarity"] = Categorical([True, False])
+            #
+            #     recommender_input_args = SearchInputRecommenderArgs(
+            #         CONSTRUCTOR_POSITIONAL_ARGS=[URM_train, ICM_all, W_sparse_CF],
+            #         CONSTRUCTOR_KEYWORD_ARGS={},
+            #         FIT_POSITIONAL_ARGS=[],
+            #         FIT_KEYWORD_ARGS={}
+            #     )
+
+            # output_folder_path = "result_experiments/"
+            #
+            # import os
+            #
+            # # If directory does not exist, create
+            # if not os.path.exists(output_folder_path):
+            #     os.makedirs(output_folder_path)
+            #
+            # n_cases = 10
+            # metric_to_optimize = "MAP"
+            #
+            # # Clone data structure to perform the fitting with the best hyperparameters on train + validation data
+            # recommender_input_args_last_test = recommender_input_args.copy()
+            # recommender_input_args_last_test.CONSTRUCTOR_POSITIONAL_ARGS[0] = URM_train + URM_validation
+            #
+            # parameterSearch.search(recommender_input_args,
+            #                        recommender_input_args_last_test=recommender_input_args_last_test,
+            #                        parameter_search_space=hyperparameters_range_dictionary,
+            #                        n_cases=n_cases,
+            #                        n_random_starts=int(n_cases / 3),
+            #                        save_model="no",
+            #                        output_folder_path=output_folder_path,
+            #                        output_file_name_root=recommender_class.RECOMMENDER_NAME,
+            #                        metric_to_optimize=metric_to_optimize
+            #                        )
+            #
+            # CFW_weighting
+            recommender = recommender_class(URM_train, ICM_all, W_sparse_CF)
             recommender.fit()
 
         elif recommender_class is ItemKNNScoresHybridRecommender:
@@ -451,12 +540,8 @@ while True:
             best_parameters = {'num_factors': 350}
             pureSVD.fit(**best_parameters)
 
-            recommender = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
+            recommender = recommender_class(URM_train, itemKNNCF, pureSVD)
             recommender.fit(alpha=0.9)
-
-        elif recommender_class in content_algorithm_list:
-            recommender = recommender_class(URM_train, ICM_all)  # todo: ICM_all or ICM_train?
-            recommender.fit(**best_parameters)
 
         else:
             recommender = recommender_class(URM_train)
