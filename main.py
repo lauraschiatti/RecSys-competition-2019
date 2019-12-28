@@ -199,62 +199,62 @@ best_parameters_list = {
 # the recommendation quality we get from a CF model
 
 
-# # TopPop
-# topPop = TopPopRecommender(URM_train)
-# topPop.fit()
-#
-# # Hybrid: ItemKNNCF + pureSVD
-#
-# # ItemKNNCFRecommender
-# itemKNNCF = ItemKNNCFRecommender(URM_train)
-# best_parameters_ItemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-#                              'feature_weighting': 'none'}
-# itemKNNCF.fit(**best_parameters_ItemKNNCF)
-#
-# # PureSVD
-# pureSVD = PureSVDRecommender(URM_train)
-# best_parameters_PureSVD = {'num_factors': 350}
-# pureSVD.fit(**best_parameters_PureSVD)
-#
-# itemKNN_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
-# best_parameters = {'alpha': 0.9}
-# itemKNN_scores_hybrid.fit(**best_parameters)
-#
-# # profile for all users (URM_all)
-#
-# profile_length = np.ediff1d(URM_all.indptr)
-# block_size = int(len(profile_length) * 0.21)
-# n_users, n_items = URM_train.shape
-# num_groups = int(np.ceil(n_users / block_size))
-# sorted_users = np.argsort(profile_length)
-#
-# MAP_topPop_per_group = []
-# MAP_itemKNN_scores_hybrid_per_group = []
-#
-# for group_id in range(0, num_groups):
-#     start_pos = group_id * block_size
-#     end_pos = min((group_id + 1) * block_size, len(profile_length))
-#
-#     users_in_group = sorted_users[start_pos:end_pos]
-#
-#     users_in_group_p_len = profile_length[users_in_group]
-#
-#     print("Group {}, average p.len {:.2f}, min {}, max {}".format(group_id,
-#                                                                   users_in_group_p_len.mean(),
-#                                                                   users_in_group_p_len.min(),
-#                                                                   users_in_group_p_len.max()))
-#
-#     users_not_in_group_flag = np.isin(sorted_users, users_in_group, invert=True)
-#     users_not_in_group = sorted_users[users_not_in_group_flag]
-#
-#     evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff], ignore_users=users_not_in_group)
-#
-#     results, _ = evaluator_test.evaluateRecommender(topPop)
-#     MAP_topPop_per_group.append(results[cutoff]["MAP"])
-#
-#     results, _ = evaluator_test.evaluateRecommender(itemKNN_scores_hybrid)
-#     MAP_itemKNN_scores_hybrid_per_group.append(results[cutoff]["MAP"])
-#
+# TopPop
+topPop = TopPopRecommender(URM_train)
+topPop.fit()
+
+# Hybrid: ItemKNNCF + pureSVD
+
+# ItemKNNCFRecommender
+itemKNNCF = ItemKNNCFRecommender(URM_train)
+best_parameters_ItemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
+                             'feature_weighting': 'none'}
+itemKNNCF.fit(**best_parameters_ItemKNNCF)
+
+# PureSVD
+pureSVD = PureSVDRecommender(URM_train)
+best_parameters_PureSVD = {'num_factors': 350}
+pureSVD.fit(**best_parameters_PureSVD)
+
+itemKNN_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
+best_parameters = {'alpha': 0.9}
+itemKNN_scores_hybrid.fit(**best_parameters)
+
+# profile for all users (URM_all)
+
+profile_length = np.ediff1d(URM_train.indptr)
+block_size = int(len(profile_length) * 0.15)
+n_users, n_items = URM_train.shape
+num_groups = int(np.ceil(n_users / block_size))
+sorted_users = np.argsort(profile_length)
+
+MAP_topPop_per_group = []
+MAP_itemKNN_scores_hybrid_per_group = []
+
+for group_id in range(0, num_groups):
+    start_pos = group_id * block_size
+    end_pos = min((group_id + 1) * block_size, len(profile_length))
+
+    users_in_group = sorted_users[start_pos:end_pos]
+
+    users_in_group_p_len = profile_length[users_in_group]
+
+    print("Group {}, average p.len {:.2f}, min {}, max {}".format(group_id,
+                                                                  users_in_group_p_len.mean(),
+                                                                  users_in_group_p_len.min(),
+                                                                  users_in_group_p_len.max()))
+
+    users_not_in_group_flag = np.isin(sorted_users, users_in_group, invert=True)
+    users_not_in_group = sorted_users[users_not_in_group_flag]
+
+    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff], ignore_users=users_not_in_group)
+
+    results, _ = evaluator_test.evaluateRecommender(topPop)
+    MAP_topPop_per_group.append(results[cutoff]["MAP"])
+
+    results, _ = evaluator_test.evaluateRecommender(itemKNN_scores_hybrid)
+    MAP_itemKNN_scores_hybrid_per_group.append(results[cutoff]["MAP"])
+
 # print("plotting.....")
 #
 # import matplotlib.pyplot as pyplot
@@ -296,7 +296,7 @@ itemKNN_scores_hybrid.fit(**best_parameters_itemKNN_scores_hybrid)
 # profile for all users (URM_all)
 
 profile_length = np.ediff1d(URM_all.indptr)
-block_size = int(len(profile_length) * 0.21)
+block_size = int(len(profile_length) * 0.15)
 n_users, n_items = URM_all.shape
 num_groups = int(np.ceil(n_users / block_size))
 sorted_users = np.argsort(profile_length)
@@ -329,12 +329,13 @@ items = []
 for user_id in user_id_array:
 
     # TopPop for users with fewer interactions
-    if user_id in users_by_group[0] or user_id in users_by_group[1]:
+    if user_id in users_by_group[0] or \
+            user_id in users_by_group[1]:
         # print("user_id: {}, group: 0 or 1, topPop".format(user_id))
         item_list = topPop.recommend(user_id,
                                      cutoff=cutoff,
                                      remove_seen_flag=True,
-                                     remove_top_pop_flag=True)
+                                     remove_top_pop_flag=False)
     else:
         # print("user_id: {}, group: 2, 3, 4, itemKNN_scores_hybrid".format(user_id))
         item_list = itemKNN_scores_hybrid.recommend(user_id,
