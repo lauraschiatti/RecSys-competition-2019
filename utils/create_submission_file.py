@@ -14,7 +14,10 @@ def create_csv(user_id_array, item_list, recommender_name):
     print("\nGenerating submission csv ... ")
 
     # save on a different dir according to the recommender used
-    submissions_dir = './submissions/' + recommender_name
+    if recommender_name != None:
+        submissions_dir = './submissions/' + recommender_name
+    else:
+        submissions_dir = './submissions/'
 
     # If directory for the recommender does not exist, create
     if not os.path.exists(submissions_dir):
