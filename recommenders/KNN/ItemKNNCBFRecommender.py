@@ -8,7 +8,7 @@ Created on 23/10/17
 from utils.compute_similarity import check_matrix
 from recommenders.BaseSimilarityMatrixRecommender import BaseItemSimilarityMatrixRecommender
 
-# from Base.IR_feature_weighting import okapi_BM_25, TF_IDF
+from utils.IR_feature_weighting import okapi_BM_25, TF_IDF
 import numpy as np
 
 from utils.compute_similarity import Compute_Similarity
@@ -37,13 +37,13 @@ class ItemKNNCBFRecommender(BaseItemSimilarityMatrixRecommender):
                 "Value for 'feature_weighting' not recognized. Acceptable values are {}, provided was '{}'".format(
                     self.FEATURE_WEIGHTING_VALUES, feature_weighting))
 
-        # if feature_weighting == "BM25":
-        #     self.ICM_train = self.ICM_train.astype(np.float32)
-        #     self.ICM_train = okapi_BM_25(self.ICM_train)
-        #
-        # elif feature_weighting == "TF-IDF":
-        #     self.ICM_train = self.ICM_train.astype(np.float32)
-        #     self.ICM_train = TF_IDF(self.ICM_train)
+        if feature_weighting == "BM25":
+            self.ICM_train = self.ICM_train.astype(np.float32)
+            self.ICM_train = okapi_BM_25(self.ICM_train)
+
+        elif feature_weighting == "TF-IDF":
+            self.ICM_train = self.ICM_train.astype(np.float32)
+            self.ICM_train = TF_IDF(self.ICM_train)
 
         similarity = Compute_Similarity(self.ICM_train.T, shrink=shrink, topK=topK, normalize=normalize,
                                         similarity=similarity, **similarity_args)

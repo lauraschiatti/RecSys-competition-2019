@@ -19,6 +19,10 @@ data_ICM_asset = dataset_dir + "/data_ICM_asset.csv"  # description of the item 
 data_ICM_price = dataset_dir + "/data_ICM_price.csv"  # price of each item (already normalized)
 data_ICM_sub_class = dataset_dir + "/data_ICM_sub_class.csv"  # categorization of the item (number)
 
+# Item content files (UCM)
+data_UCM_age = dataset_dir + "/data_UCM_age.csv"  # age of each user (already normalized)
+data_UCM_region = dataset_dir + "/data_UCM_region.csv"  # region of each user (already normalized)
+
 # global vars
 user_list = []
 item_list = []
@@ -26,6 +30,7 @@ n_interactions = 0
 n_users = 0
 n_items = 0
 n_subclass = 0
+n_regions = 0
 
 
 # -------------------------------------------
@@ -191,6 +196,64 @@ def build_ICM():
 
     return ICM_all
 
+
+def build_UCM(URM):
+    # features = [‘asset’, ’price’, ’subclass’] info about products
+
+    # Load subclass data
+    matrix_tuples = []
+
+    with open(data_UCM_age, 'r') as file:  # read file's content
+        next(file)  # skip header row
+        for line in file:
+            # Create a tuple for each interaction (line in the file)
+            matrix_tuples.append(row_split(line))
+
+    # Separate user_id and age
+    user_list, age_list, col_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
+
+    # Convert values to list# Create lists of all users and ages
+    user_list_icm = list(user_list)
+    age_list_icm = list(age_list)
+    col_list_icm = np.zeros(len(col_list))
+
+    # Number of items that are in the subclass list
+    num_users = URM.shape[0]
+    UCM_shape = (num_users, 1)
+    UCM_age = csr_sparse_matrix(user_list_icm, age_list_icm, col_list_icm, shape=UCM_shape)
+
+    # Load region data
+    matrix_tuples = []
+    global n_regions
+
+    with open(data_UCM_region, 'r') as file:  # read file's content
+        next(file)  # skip header row
+        for line in file:
+            # Create a tuple for each interaction (line in the file)
+            matrix_tuples.append(row_split(line))
+
+    # Separate user_id, item_id and rating
+    user_list, region_list, col_list = zip(*matrix_tuples)  # join tuples together (zip() to map values)
+
+    # Convert values to list# Create lists of all users, items and contents (ratings)
+    user_list_icm = list(user_list)
+    region_list_icm = list(region_list)
+
+    n_regions = max(region_list_icm) + 1
+
+    UCM_shape = (num_users, n_regions)
+
+    ones = np.ones(len(region_list_icm))
+    UCM_region = sps.coo_matrix((ones, (user_list_icm, region_list_icm)), shape = UCM_shape)
+    UCM_region = UCM_region.tocsr()
+
+    UCM_all = sps.hstack([UCM_age, UCM_region], format='csr')
+
+    # item_feature_ratios(ICM_all)
+
+    print("UCM built!\n")
+
+    return UCM_all
 
 # def get_statistics_ICM(self):
 #

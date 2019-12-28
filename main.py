@@ -3,7 +3,7 @@
 
 import traceback
 import numpy as np
-from utils.data_manager import build_URM, build_ICM, get_statistics_URM, get_target_users
+from utils.data_manager import build_URM, build_ICM, build_UCM, get_statistics_URM, get_target_users
 from utils.evaluation import evaluate_algorithm
 from utils.Evaluation.Evaluator import EvaluatorHoldout
 from utils.ParameterTuning.hyperparameter_search import runParameterSearch_Collaborative, runParameterSearch_Content
@@ -49,6 +49,7 @@ from recommenders.PureSVDRecommender import PureSVDRecommender
 ##########                                                  ##########
 ######################################################################
 from recommenders.KNN.ItemKNNCBFRecommender import ItemKNNCBFRecommender
+from recommenders.KNN.UserKNNCBFRecommender import UserKNNCBFRecommender
 
 ######################################################################
 ##########                                                  ##########
@@ -63,6 +64,7 @@ from recommenders.Hybrid.ItemKNNScoresHybridRecommender import ItemKNNScoresHybr
 
 URM_all = build_URM()
 ICM_all = build_ICM()
+UCM_all = build_UCM(URM_all)
 # get_statistics_URM(URM_all)
 
 # Cold items, cold users and cold features
@@ -130,7 +132,8 @@ collaborative_algorithm_list = [
 
 # Content-based recommenders
 content_algorithm_list = [
-    ItemKNNCBFRecommender
+    ItemKNNCBFRecommender,
+    UserKNNCBFRecommender
 ]
 
 # Hybrid recommenders
