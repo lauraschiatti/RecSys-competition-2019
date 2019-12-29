@@ -116,6 +116,7 @@ def runParameterSearch_Content(recommender_class, URM_train, ICM_object, ICM_nam
                                evaluator_validation=None, evaluator_test=None, metric_to_optimize="PRECISION",
                                output_folder_path="result_experiments/", parallelizeKNN=False, allow_weighting=True,
                                similarity_type_list=None):
+
     # If directory does not exist, create
     if not os.path.exists(output_folder_path):
         os.makedirs(output_folder_path)

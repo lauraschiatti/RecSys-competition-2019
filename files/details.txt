@@ -120,3 +120,22 @@ Each row is a user [user_id] , [ordered list of 10 recommended items separated b
     - the difference in the leaderboard MAP vs the MAP of the runs against my test set is due to the
     sampling strategy for splitting training and local test sets
 
+
+
+# Cold items, cold users and cold features
+# ----------------------------------------
+
+# NOTE:
+# Usually to deal with cold items you use a content-collaborative hybrid
+# URM, ICM = masks.refactor_URM_ICM(URM, ICM)
+
+# The issue with cold users and cold items is that a personalized collaborative recommender
+# is not able to model them.
+# Even if you train a model like a matrix factorization or even an itemKNN and
+# you get a recommendation list, those are just random recommendations.
+
+# In order to overcome this, you have to look for other models that allow you to provide
+# a meaningful result for cold items and users (e.g., TopPop, content-based …)
+# and build a hybrid. The easiest solution is to average those models or to switch among
+# them depending on the user of interest. You may find some hints in the practice sessions for
+# hybrid and collaborative boosted FW

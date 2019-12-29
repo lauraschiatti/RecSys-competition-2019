@@ -192,7 +192,7 @@ def build_ICM():
 
     # item_feature_ratios(ICM_all)
 
-    print("ICM built!\n")
+    print("ICM built!")
 
     return ICM_all
 
