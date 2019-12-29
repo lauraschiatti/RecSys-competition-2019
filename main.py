@@ -259,7 +259,7 @@ recommender_list = [
 # the recommendation quality we get from a CF model
 
 
-# # TopPop
+# TopPop
 # topPop = TopPopRecommender(URM_train)
 # topPop.fit()
 #
@@ -267,19 +267,20 @@ recommender_list = [
 #
 # # ItemKNNCFRecommender
 # itemKNNCF = ItemKNNCFRecommender(URM_train)
-# best_parameters_ItemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-#                              'feature_weighting': 'none'}
+# best_parameters_ItemKNNCF = {'topK': 43, 'shrink': 997, 'similarity': 'cosine',
+#                                  'normalize': True, 'feature_weighting': 'TF-IDF'}
+#
 # itemKNNCF.fit(**best_parameters_ItemKNNCF)
 #
 # # PureSVD
 # pureSVD = PureSVDRecommender(URM_train)
-# best_parameters_PureSVD = {'num_factors': 350}
+# best_parameters_PureSVD = {'num_factors': 50}
 # pureSVD.fit(**best_parameters_PureSVD)
 #
 # itemKNN_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
 # best_parameters = {'alpha': 0.9}
 # itemKNN_scores_hybrid.fit(**best_parameters)
-#
+
 # # profile for all users (URM_all)
 #
 # profile_length = np.ediff1d(URM_train.indptr)
@@ -314,7 +315,7 @@ recommender_list = [
 #
 #     results, _ = evaluator_test.evaluateRecommender(itemKNN_scores_hybrid)
 #     MAP_itemKNN_scores_hybrid_per_group.append(results[cutoff]["MAP"])
-
+#
 # print("plotting.....")
 #
 # import matplotlib.pyplot as pyplot
@@ -326,32 +327,32 @@ recommender_list = [
 # pyplot.legend()
 # pyplot.show()
 
+# exit(0)
 
 ################################################################################################################
 
 # --- generate predictions --- #
 
 # Train models on the whole dataset
-# # TopPop
+# TopPop
 # topPop = TopPopRecommender(URM_all)
 # topPop.fit()
 #
 # # Hybrid: ItemKNNCF + pureSVD
 # # ItemKNNCFRecommender
 # itemKNNCF = ItemKNNCFRecommender(URM_all)
-# best_parameters_ItemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-#                              'feature_weighting': 'none'}
+# best_parameters_ItemKNNCF = {'topK': 43, 'shrink': 997, 'similarity': 'cosine',
+#                                  'normalize': True, 'feature_weighting': 'TF-IDF'}
 # itemKNNCF.fit(**best_parameters_ItemKNNCF)
 #
 # # PureSVD
 # pureSVD = PureSVDRecommender(URM_all)
-# best_parameters_PureSVD = {'num_factors': 350}
+# best_parameters_PureSVD = {'num_factors': 50}
 # pureSVD.fit(**best_parameters_PureSVD)
 #
 # itemKNN_scores_hybrid = ItemKNNScoresHybridRecommender(URM_all, itemKNNCF, pureSVD)
-# best_parameters_itemKNN_scores_hybrid = {'alpha': 0.9}
-# itemKNN_scores_hybrid.fit(**best_parameters_itemKNN_scores_hybrid)
-#
+# best_parameters = {'alpha': 0.9}
+# itemKNN_scores_hybrid.fit(**best_parameters)
 #
 # # profile for all users (URM_all)
 #
@@ -382,7 +383,6 @@ recommender_list = [
 #
 #
 # # Generate predictions
-# top_10_items = {}
 # user_id_array = get_target_users()
 # items = []
 #
@@ -394,7 +394,7 @@ recommender_list = [
 #         # print("user_id: {}, group: 0 or 1, topPop".format(user_id))
 #         item_list = topPop.recommend(user_id,
 #                                      cutoff=cutoff,
-#                                      remove_seen_flag=True,
+#                                      remove_seen_flag=False,
 #                                      remove_top_pop_flag=False)
 #     else:
 #         # print("user_id: {}, group: 2, 3, 4, itemKNN_scores_hybrid".format(user_id))
@@ -404,13 +404,8 @@ recommender_list = [
 #                                                     remove_top_pop_flag=True)
 #
 #     items.append(np.array(item_list))
-#     # item_list = np.array(item_list)  # list to np.array
-#     # top_10_items[user_id] = item_list
 #
 #
-# # print("top_10_items ... ")
-# # import pprint
-# # pprint.pprint(items)
 # # save predictions on csv file
 # create_csv(user_id_array, items, None)
 #
