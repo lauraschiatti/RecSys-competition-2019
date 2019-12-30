@@ -93,7 +93,7 @@ def hyperparams_tuning(recommender_class):
 
     # Non-personalized and Collaborative
     if recommender_class in [RandomRecommender, TopPopRecommender, ItemKNNCFRecommender, UserKNNCFRecommender,
-                             PureSVDRecommender]:
+                             PureSVDRecommender, P3alphaRecommender]:
 
         if recommender_class in [ItemKNNCFRecommender, UserKNNCFRecommender]:
             output_file_name_root = "{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
@@ -190,12 +190,6 @@ non_personalized_list = [
     TopPopRecommender
 ]
 
-# Graph-based recommenders
-graph_algorithm_list = [
-    # P3alphaRecommender,
-    # RP3betaRecommender,
-]
-
 # Collaborative recommenders
 collaborative_algorithm_list = [
     ItemKNNCFRecommender,
@@ -204,7 +198,11 @@ collaborative_algorithm_list = [
     # MatrixFactorization_FunkSVD_Cython,
     PureSVDRecommender,
     # SLIM_BPR_Cython,
-    # SLIMElasticNetRecommender
+    # SLIMElasticNetRecommender,
+
+    # Graph-based
+    P3alphaRecommender,
+    # RP3betaRecommender,
 ]
 
 # Content-based recommenders
@@ -226,7 +224,7 @@ recommender_list = [
     TopPopRecommender,
 
     # Graph-based recommenders
-    # P3alphaRecommender,
+    P3alphaRecommender,
     # RP3betaRecommender,
 
     # Collaborative recommenders
@@ -424,7 +422,7 @@ while True:
         recommender_class = recommender_list[selected - 1]
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
-        apply_hyperparams_tuning = False
+        apply_hyperparams_tuning = True
 
 
         # Fit the recommender with the hyperparameters we just learned
@@ -442,8 +440,10 @@ while True:
             if apply_hyperparams_tuning:
                 best_parameters_itemKNNCBF = hyperparams_tuning(recommender_class)
             else:
+                # if recommender_class is ItemKNNCBFRecommender:
                 best_parameters_itemKNNCBF = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
-                               'feature_weighting': 'none'}
+                                   'feature_weighting': 'none'}
+                # else:
 
             recommender.fit(**best_parameters_itemKNNCBF)
 
@@ -471,7 +471,14 @@ while True:
             itemKNNCF.fit(**best_parameters_itemKNNCF)
 
             P3alpha = P3alphaRecommender(URM_train)
-            P3alpha.fit()
+
+            if apply_hyperparams_tuning:
+                best_parameters_P3alpha = hyperparams_tuning(P3alphaRecommender)
+            # else:
+            #     best_parameters_P3alpha = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
+            #                        'feature_weighting': 'none'}
+
+            P3alpha.fit(**best_parameters_P3alpha)
 
             recommender = recommender_class(URM_train, itemKNNCF.W_sparse, P3alpha.W_sparse)
             best_parameters = {'alpha': 0.7}
@@ -585,7 +592,7 @@ while True:
         evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff])
         result_dict, _ = evaluator_test.evaluateRecommender(recommender)
 
-        print("{} result_dict MAP {}".format(recommender_class.RECOMMENDER_NAME, result_dict[cutoff]["MAP"]))
+        print("{} result_dict MAP {}".format(recommender.RECOMMENDER_NAME, result_dict[cutoff]["MAP"]))
 
         # Generate predictions
         # --------------------

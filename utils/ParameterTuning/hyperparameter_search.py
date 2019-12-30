@@ -22,8 +22,9 @@ from recommenders.KNN.UserKNNCFRecommender import UserKNNCFRecommender
 from recommenders.KNN.ItemKNNCFRecommender import ItemKNNCFRecommender
 
 # Graph-based
-# from GraphBased.P3alphaRecommender import P3alphaRecommender
+from recommenders.GraphBased.P3alphaRecommender import P3alphaRecommender
 # from GraphBased.RP3betaRecommender import RP3betaRecommender
+
 
 # KNN Machine Learning
 # from SLIM_BPR.Cython.SLIM_BPR_Cython import SLIM_BPR_Cython
@@ -295,18 +296,18 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
 
         ##########################################################################################################
 
-        # if recommender_class is P3alphaRecommender:
-        #     hyperparameters_range_dictionary = {}
-        #     hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
-        #     hyperparameters_range_dictionary["alpha"] = Real(low=0, high=2, prior='uniform')
-        #     hyperparameters_range_dictionary["normalize_similarity"] = Categorical([True, False])
-        #
-        #     recommender_input_args = SearchInputRecommenderArgs(
-        #         CONSTRUCTOR_POSITIONAL_ARGS=[URM_train],
-        #         CONSTRUCTOR_KEYWORD_ARGS={},
-        #         FIT_POSITIONAL_ARGS=[],
-        #         FIT_KEYWORD_ARGS={}
-        #     )
+        if recommender_class is P3alphaRecommender:
+            hyperparameters_range_dictionary = {}
+            hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
+            hyperparameters_range_dictionary["alpha"] = Real(low=0, high=2, prior='uniform')
+            hyperparameters_range_dictionary["normalize_similarity"] = Categorical([True, False])
+
+            recommender_input_args = SearchInputRecommenderArgs(
+                CONSTRUCTOR_POSITIONAL_ARGS=[URM_train],
+                CONSTRUCTOR_KEYWORD_ARGS={},
+                FIT_POSITIONAL_ARGS=[],
+                FIT_KEYWORD_ARGS={}
+            )
 
         ##########################################################################################################
 
