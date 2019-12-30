@@ -7,6 +7,7 @@
 
 import scipy.sparse as sps
 import numpy as np
+from utils.compute_similarity import check_matrix
 
 dataset_dir = "dataset/"
 
@@ -62,6 +63,8 @@ def build_URM():
     URM = csr_sparse_matrix(rating_list, user_list, item_list)
 
     print("URM built!")
+    print(URM[1:3, :].todense())
+    print("\n")
 
     return URM
 
@@ -110,6 +113,21 @@ def get_statistics_splitted_URM(SPLIT_URM_DICT):
         SPLIT_URM_DICT["URM_test"].nnz, compute_density(SPLIT_URM_DICT["URM_test"]))
 
     print(statistics_string)
+
+
+def compute_density(URM):
+    n_users, n_items = URM.shape
+    n_interactions = URM.nnz
+
+    # This avoids the fixed bit representation of numpy preventing
+    # an overflow when computing the product
+    n_items = float(n_items)
+    n_users = float(n_users)
+
+    if n_interactions == 0:
+        return 0.0
+
+    return n_interactions / (n_items * n_users)
 
 
 # -------------------------------------------------------------------------
@@ -193,6 +211,8 @@ def build_ICM():
     # item_feature_ratios(ICM_all)
 
     print("ICM built!")
+    print(ICM_all[1:3, :].todense())
+    print("\n")
 
     return ICM_all
 
@@ -251,9 +271,13 @@ def build_UCM(URM):
 
     # item_feature_ratios(ICM_all)
 
-    print("UCM built!\n")
+    print("UCM built!")
+    print(UCM_all[1:3, :].todense())
+    print("\n")
+
 
     return UCM_all
+
 
 # def get_statistics_ICM(self):
 #
@@ -275,25 +299,14 @@ def build_UCM(URM):
 #
 #         print("\n")
 
-def compute_density(URM):
-    n_users, n_items = URM.shape
-    n_interactions = URM.nnz
 
-    # This avoids the fixed bit representation of numpy preventing
-    # an overflow when computing the product
-    n_items = float(n_items)
-    n_users = float(n_users)
-
-    if n_interactions == 0:
-        return 0.0
-
-    return n_interactions / (n_items * n_users)
 
 
 # Getters
 # -------
 
 # Get all user_id list
+
 def get_user_list_unique():
     list_unique = list(set(user_list))  # remove duplicates
     return list_unique
@@ -319,7 +332,7 @@ def get_target_users():
 
 
 # Get user_id seen items
-def get_user_seen_items(user_id):
+def get_user_seen_items(user_id, URM):
     # seen items: those the user already interacted with
     user_seen_items = URM[user_id].indices
 
