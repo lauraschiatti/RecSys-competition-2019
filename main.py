@@ -185,6 +185,7 @@ def fit_recommender(recommender_class, URM, ICM=None):
     # Hybrid recommenders
     elif recommender_class is ItemKNNSimilarityHybridRecommender:
         # Hybrid: ItemKNNCF + P3alpha
+
         itemKNNCF = ItemKNNCFRecommender(URM)
 
         if apply_hyperparams_tuning:
@@ -204,7 +205,6 @@ def fit_recommender(recommender_class, URM, ICM=None):
         if apply_hyperparams_tuning:
             best_parameters_P3alpha = hyperparams_tuning(P3alphaRecommender)
         else:
-            # try:
             best_parameters_P3alpha = best_parameters_list["P3alphaRecommender"]
 
             # best_parameters_P3alpha = {'topK': 23, 'alpha': 0.014269061954631738, 'normalize_similarity': True}
@@ -212,7 +212,7 @@ def fit_recommender(recommender_class, URM, ICM=None):
         P3alpha.fit(**best_parameters_P3alpha)
 
         recommender = ItemKNNSimilarityHybridRecommender(URM, itemKNNCF.W_sparse, P3alpha.W_sparse)
-        best_parameters = {'alpha': 0.7}
+        best_parameters = {'alpha': 0.6}
         recommender.fit(**best_parameters)
 
         # Hybrid: ItemKNNCF + itemKNNCBF
@@ -230,8 +230,9 @@ def fit_recommender(recommender_class, URM, ICM=None):
         # best_parameters = {'alpha': 0.8}
         # recommender.fit(**best_parameters)
 
+    # feature weighting techniques
     elif recommender_class is CFW_D_Similarity_Linalg:
-        # feature weighting techniques
+
         itemKNNCF = ItemKNNCFRecommender(URM)
 
         if apply_hyperparams_tuning:
@@ -278,7 +279,7 @@ def fit_recommender(recommender_class, URM, ICM=None):
         pureSVD.fit(**best_parameters_pureSVD)
 
         recommender = ItemKNNScoresHybridRecommender(URM, itemKNNCF, pureSVD)
-        best_parameters = {'alpha': 0.9}
+        best_parameters = {'alpha': 0.6}
         recommender.fit(**best_parameters)
 
     return recommender
@@ -409,8 +410,8 @@ best_parameters_list = {
 
 ################################################################################################################
 
-# User-wise hybrid
-# ----------------
+# User-wise hybrids
+# -----------------
 
 # Models do not have the same accuracy for different user types.
 # Let's divide the users according to their profile length and then compare
@@ -433,27 +434,32 @@ def recommendations_quality_by_group():
     # PureSVD
     pureSVD = fit_recommender(PureSVDRecommender, URM_train)
 
-    # Similarity Hybrid: ItemKNNCF + itemKNNCBF
-    # -----------------------------------------
+
+    # Similarity Hybrid: linear combination of item-based models
+    # ----------------------------------------------------------
+
+    # ItemKNNCF + itemKNNCBF
     itemCBF_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
-    best_parameters = {'alpha': 0.8}
+    best_parameters = {'alpha': 0.6}
     itemCBF_similarity_hybrid.fit(**best_parameters)
 
-    # Similarity Hybrid: ItemKNNCF + P3alpha
-    # --------------------------------------
+    # ItemKNNCF + P3alpha
     itemCF_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse, P3alpha.W_sparse)
-    best_parameters = {'alpha': 0.7}
+    best_parameters = {'alpha': 0.6}
     itemCF_similarity_hybrid.fit(**best_parameters)
 
-    # Score Hybrid: ItemKNNCF + pureSVD
-    # ---------------------------------
+    # Score Hybrid: linear combination of heterogeneous models (combination of predictions)
+    # --------------------------------------------------------------------------------------
+
+    # ItemKNNCF + pureSVD
     itemCF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
-    best_parameters = {'alpha': 0.9}
+    best_parameters = {'alpha': 0.6}
     itemCF_scores_hybrid.fit(**best_parameters)
 
-    # profile for all users (URM_all)
-    # -------------------------------
-    profile_length = np.ediff1d(URM_train.indptr)
+    # # User-wise discrimination
+    # --------------------------
+
+    profile_length = np.ediff1d(URM_train.indptr) # users' profile
     block_size = int(len(profile_length) * 0.15)
     n_users, n_items = URM_train.shape
     num_groups = int(np.ceil(n_users / block_size))
@@ -545,7 +551,7 @@ def recommendations_quality_by_group():
 # best_parameters = {'alpha': 0.9}
 # itemKNN_scores_hybrid.fit(**best_parameters)
 #
-# # profile for all users (URM_all)
+
 #
 # profile_length = np.ediff1d(URM_all.indptr)
 # block_size = int(len(profile_length) * 0.15)

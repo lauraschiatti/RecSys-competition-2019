@@ -8,6 +8,7 @@ Created on 08/09/17
 from scipy.sparse import linalg
 import time, sys
 import numpy as np
+from utils.compute_similarity import Compute_Similarity, check_matrix
 from recommenders.BaseSimilarityMatrixRecommender import BaseItemSimilarityMatrixRecommender
 
 
