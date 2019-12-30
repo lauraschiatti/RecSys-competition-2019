@@ -156,7 +156,7 @@ def hyperparams_tuning(recommender_class):
 # Fit recommenders
 # -----------------
 
-def fit_recommender(URM, ICM):
+def fit_recommender(recommender_class, URM, ICM=None):
 
     apply_hyperparams_tuning = False
 
@@ -416,75 +416,108 @@ best_parameters_list = {
 # Let's divide the users according to their profile length and then compare
 # the recommendation quality we get from a CF model
 
+def recommendations_quality_by_group():
 
-# TopPop
-# topPop = TopPopRecommender(URM_train)
-# topPop.fit()
-#
-# # Hybrid: ItemKNNCF + pureSVD
-#
-# # ItemKNNCFRecommender
-# itemKNNCF = ItemKNNCFRecommender(URM_train)
-# best_parameters_ItemKNNCF = {'topK': 43, 'shrink': 997, 'similarity': 'cosine',
-#                                  'normalize': True, 'feature_weighting': 'TF-IDF'}
-#
-# itemKNNCF.fit(**best_parameters_ItemKNNCF)
-#
-# # PureSVD
-# pureSVD = PureSVDRecommender(URM_train)
-# best_parameters_PureSVD = {'num_factors': 50}
-# pureSVD.fit(**best_parameters_PureSVD)
-#
-# itemKNN_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
-# best_parameters = {'alpha': 0.9}
-# itemKNN_scores_hybrid.fit(**best_parameters)
+    # TopPop
+    topPop = fit_recommender(TopPopRecommender, URM_train, ICM_all)
 
-# # profile for all users (URM_all)
-#
-# profile_length = np.ediff1d(URM_train.indptr)
-# block_size = int(len(profile_length) * 0.15)
-# n_users, n_items = URM_train.shape
-# num_groups = int(np.ceil(n_users / block_size))
-# sorted_users = np.argsort(profile_length)
-#
-# MAP_topPop_per_group = []
-# MAP_itemKNN_scores_hybrid_per_group = []
-#
-# for group_id in range(0, num_groups):
-#     start_pos = group_id * block_size
-#     end_pos = min((group_id + 1) * block_size, len(profile_length))
-#
-#     users_in_group = sorted_users[start_pos:end_pos]
-#
-#     users_in_group_p_len = profile_length[users_in_group]
-#
-#     print("Group {}, average p.len {:.2f}, min {}, max {}".format(group_id,
-#                                                                   users_in_group_p_len.mean(),
-#                                                                   users_in_group_p_len.min(),
-#                                                                   users_in_group_p_len.max()))
-#
-#     users_not_in_group_flag = np.isin(sorted_users, users_in_group, invert=True)
-#     users_not_in_group = sorted_users[users_not_in_group_flag]
-#
-#     evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff], ignore_users=users_not_in_group)
-#
-#     results, _ = evaluator_test.evaluateRecommender(topPop)
-#     MAP_topPop_per_group.append(results[cutoff]["MAP"])
-#
-#     results, _ = evaluator_test.evaluateRecommender(itemKNN_scores_hybrid)
-#     MAP_itemKNN_scores_hybrid_per_group.append(results[cutoff]["MAP"])
-#
-# print("plotting.....")
-#
-# import matplotlib.pyplot as pyplot
-#
-# pyplot.plot(MAP_topPop_per_group, label="topPop")
-# pyplot.plot(MAP_itemKNN_scores_hybrid_per_group, label="ItemKNNCF + pureSVD")
-# pyplot.ylabel('MAP')
-# pyplot.xlabel('User Group')
-# pyplot.legend()
-# pyplot.show()
+    # ItemCF
+    itemKNNCF = fit_recommender(ItemKNNCFRecommender, URM_train)
 
+    # ItemCBF
+    itemKNNCBF = fit_recommender(ItemKNNCBFRecommender, URM_train, ICM_all)
+
+    # P3alpha
+    P3alpha = fit_recommender(P3alphaRecommender, URM_train)
+
+    # PureSVD
+    pureSVD = fit_recommender(PureSVDRecommender, URM_train)
+
+    # Similarity Hybrid: ItemKNNCF + itemKNNCBF
+    # -----------------------------------------
+    itemCBF_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
+    best_parameters = {'alpha': 0.8}
+    itemCBF_similarity_hybrid.fit(**best_parameters)
+
+    # Similarity Hybrid: ItemKNNCF + P3alpha
+    # --------------------------------------
+    itemCF_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse, P3alpha.W_sparse)
+    best_parameters = {'alpha': 0.7}
+    itemCF_similarity_hybrid.fit(**best_parameters)
+
+    # Score Hybrid: ItemKNNCF + pureSVD
+    # ---------------------------------
+    itemCF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
+    best_parameters = {'alpha': 0.9}
+    itemCF_scores_hybrid.fit(**best_parameters)
+
+    # profile for all users (URM_all)
+    # -------------------------------
+    profile_length = np.ediff1d(URM_train.indptr)
+    block_size = int(len(profile_length) * 0.15)
+    n_users, n_items = URM_train.shape
+    num_groups = int(np.ceil(n_users / block_size))
+    sorted_users = np.argsort(profile_length)
+
+    MAP_topPop_per_group = []
+    MAP_itemKNNCF_per_group = []
+    MAP_itemKNNCBF_per_group = []
+    MAP_itemCBF_similarity_hybrid_per_group = []
+    MAP_itemCF_similarity_hybrid_per_group = []
+    MAP_itemCF_scores_hybrid_per_group = []
+
+    for group_id in range(0, num_groups):
+        start_pos = group_id * block_size
+        end_pos = min((group_id + 1) * block_size, len(profile_length))
+
+        users_in_group = sorted_users[start_pos:end_pos]
+
+        users_in_group_p_len = profile_length[users_in_group]
+
+        print("Group {}, average p.len {:.2f}, min {}, max {}".format(group_id,
+                                                                      users_in_group_p_len.mean(),
+                                                                      users_in_group_p_len.min(),
+                                                                      users_in_group_p_len.max()))
+
+        users_not_in_group_flag = np.isin(sorted_users, users_in_group, invert=True)
+        users_not_in_group = sorted_users[users_not_in_group_flag]
+
+        evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff], ignore_users=users_not_in_group)
+
+        results, _ = evaluator_test.evaluateRecommender(topPop)
+        MAP_topPop_per_group.append(results[cutoff]["MAP"])
+
+        results, _ = evaluator_test.evaluateRecommender(itemKNNCF)
+        MAP_itemKNNCF_per_group.append(results[cutoff]["MAP"])
+
+        results, _ = evaluator_test.evaluateRecommender(itemKNNCBF)
+        MAP_itemKNNCBF_per_group.append(results[cutoff]["MAP"])
+
+        results, _ = evaluator_test.evaluateRecommender(itemCBF_similarity_hybrid)
+        MAP_itemCBF_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+
+        results, _ = evaluator_test.evaluateRecommender(itemCF_similarity_hybrid)
+        MAP_itemCF_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+
+        results, _ = evaluator_test.evaluateRecommender(itemCF_scores_hybrid)
+        MAP_itemCF_scores_hybrid_per_group.append(results[cutoff]["MAP"])
+
+    print("plotting.....")
+
+    import matplotlib.pyplot as pyplot
+
+    pyplot.plot(MAP_topPop_per_group, label="topPop")
+    pyplot.plot(MAP_itemKNNCF_per_group, label="itemKNNCF")
+    pyplot.plot(MAP_itemKNNCBF_per_group, label="itemKNNCBF")
+    pyplot.plot(MAP_itemCBF_similarity_hybrid_per_group, label="ItemKNNCF + ItemKNNCBF")
+    pyplot.plot(MAP_itemCF_scores_hybrid_per_group, label="ItemKNNCF + pureSVD")
+    pyplot.plot(MAP_itemCF_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha")
+    pyplot.ylabel('MAP')
+    pyplot.xlabel('User Group')
+    pyplot.legend()
+    pyplot.show()
+
+# recommendations_quality_by_group()
 # exit(0)
 
 ################################################################################################################
@@ -583,7 +616,7 @@ while True:
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
 
-        recommender = fit_recommender(URM_train, ICM_all)
+        recommender = fit_recommender(recommender_class, URM_train, ICM_all)
 
         # Evaluate model
         # --------------
@@ -596,14 +629,14 @@ while True:
         # Generate predictions
         # --------------------
 
-        predictions = input('\nCompute and save top10 predictions?: y - Yes  n - No\n')
+        predictions = input('\nCompute and save top-10 predictions?: y - Yes  n - No\n')
 
         if predictions == 'y':
 
             # Train the model on the whole dataset using tuned params
             # -------------------------------------------------------
 
-            recommender = fit_recommender(URM_all, ICM_all)
+            recommender = fit_recommender(recommender_class, URM_all, ICM_all)
 
             user_id_array = get_target_users()
             item_list = recommender.recommend(user_id_array,
