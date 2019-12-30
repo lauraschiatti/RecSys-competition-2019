@@ -45,7 +45,17 @@ from recommenders.PureSVDRecommender import PureSVDRecommender
 ######################################################################
 from recommenders.KNN.ItemKNNCBFRecommender import ItemKNNCBFRecommender
 
+
 ######################################################################
+##########                                                  ##########
+##########                 HYBRID RECOMMENDERS              ##########
+##########                                                  ##########
+######################################################################
+from recommenders.Hybrid.CFW_D_Similarity_Linalg import CFW_D_Similarity_Linalg
+
+
+######################################################################
+
 from skopt.space import Real, Integer, Categorical
 import traceback
 # from Utils.PoolWithSubprocess import PoolWithSubprocess
@@ -468,6 +478,21 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
         #         FIT_POSITIONAL_ARGS=[],
         #         FIT_KEYWORD_ARGS={}
         #     )
+
+        ##########################################################################################################
+
+        if recommender_class is CFW_D_Similarity_Linalg:
+            hyperparameters_range_dictionary = {}
+            hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
+            hyperparameters_range_dictionary["add_zeros_quota"] = Real(low=0, high=1, prior='uniform')
+            hyperparameters_range_dictionary["normalize_similarity"] = Categorical([True, False])
+
+            recommender_input_args = SearchInputRecommenderArgs(
+                CONSTRUCTOR_POSITIONAL_ARGS=[URM_train, ICM_all, W_sparse_CF],
+                CONSTRUCTOR_KEYWORD_ARGS={},
+                FIT_POSITIONAL_ARGS=[],
+                FIT_KEYWORD_ARGS={}
+            )
 
         #########################################################################################################
 

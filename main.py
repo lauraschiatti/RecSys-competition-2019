@@ -120,6 +120,7 @@ def hyperparams_tuning(recommender_class):
 
     # Content-based
     elif recommender_class in [ItemKNNCBFRecommender, UserKNNCBFRecommender]:
+        print("content")
 
         output_file_name_root = "{}_{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
                                                                ICM_name, similarity_type)
@@ -152,6 +153,137 @@ def hyperparams_tuning(recommender_class):
     return best_parameters
 
 
+# Fit recommenders
+# -----------------
+
+def fit_recommender(URM, ICM):
+
+    apply_hyperparams_tuning = False
+
+    # Non-personalized
+    if recommender_class in non_personalized_list:
+        recommender = recommender_class(URM)
+        recommender.fit()
+
+    # Content-based and Collaborative recommenders
+    elif recommender_class in content_algorithm_list or \
+            recommender_class in collaborative_algorithm_list:
+
+        if recommender_class in content_algorithm_list:
+            recommender = recommender_class(URM, ICM)  # todo: ICM_all or ICM_train?
+
+        elif recommender_class in collaborative_algorithm_list:
+            recommender = recommender_class(URM)
+
+        if apply_hyperparams_tuning:
+            best_parameters = hyperparams_tuning(recommender_class)
+        else:
+            best_parameters = best_parameters_list[recommender_class.RECOMMENDER_NAME]
+
+        recommender.fit(**best_parameters)
+
+    # Hybrid recommenders
+    elif recommender_class is ItemKNNSimilarityHybridRecommender:
+        # Hybrid: ItemKNNCF + P3alpha
+        itemKNNCF = ItemKNNCFRecommender(URM)
+
+        if apply_hyperparams_tuning:
+            best_parameters_itemKNNCF = hyperparams_tuning(ItemKNNCFRecommender)
+        else:
+            best_parameters_itemKNNCF = best_parameters_list["ItemKNNCFRecommender"]
+
+            # best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
+            #                    'feature_weighting': 'none'}
+
+        itemKNNCF.fit(**best_parameters_itemKNNCF)
+
+        ##########################################################################################
+
+        P3alpha = P3alphaRecommender(URM)
+
+        if apply_hyperparams_tuning:
+            best_parameters_P3alpha = hyperparams_tuning(P3alphaRecommender)
+        else:
+            # try:
+            best_parameters_P3alpha = best_parameters_list["P3alphaRecommender"]
+
+            # best_parameters_P3alpha = {'topK': 23, 'alpha': 0.014269061954631738, 'normalize_similarity': True}
+
+        P3alpha.fit(**best_parameters_P3alpha)
+
+        recommender = ItemKNNSimilarityHybridRecommender(URM, itemKNNCF.W_sparse, P3alpha.W_sparse)
+        best_parameters = {'alpha': 0.7}
+        recommender.fit(**best_parameters)
+
+        # Hybrid: ItemKNNCF + itemKNNCBF
+        # itemKNNCBF = ItemKNNCBFRecommender(URM_train, ICM_all)
+        #
+        # if apply_hyperparams_tuning:
+        #     best_parameters_itemKNNCBF = hyperparams_tuning(ItemKNNCBFRecommender)
+        # else:
+        #     best_parameters_itemKNNCBF = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
+        #                    'feature_weighting': 'none'}
+        #
+        # itemKNNCBF.fit(**best_parameters_itemKNNCBF)
+        #
+        # recommender = recommender_class(URM_train, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
+        # best_parameters = {'alpha': 0.8}
+        # recommender.fit(**best_parameters)
+
+    elif recommender_class is CFW_D_Similarity_Linalg:
+        # feature weighting techniques
+        itemKNNCF = ItemKNNCFRecommender(URM)
+
+        if apply_hyperparams_tuning:
+            best_parameters_itemKNNCF = hyperparams_tuning(ItemKNNCFRecommender)
+        else:
+            best_parameters_itemKNNCF = best_parameters_list["ItemKNNCFRecommender"]
+
+            # best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
+            #                              'feature_weighting': 'none'}
+
+        itemKNNCF.fit(**best_parameters_itemKNNCF)
+
+        W_sparse_CF = itemKNNCF.W_sparse
+
+        # Weighted Content-based similarity
+        recommender = CFW_D_Similarity_Linalg(URM, ICM, W_sparse_CF)
+        recommender.fit()
+
+    elif recommender_class is ItemKNNScoresHybridRecommender:
+        # Hybrid: ItemKNNCF + pureSVD
+        itemKNNCF = ItemKNNCFRecommender(URM)
+
+        if apply_hyperparams_tuning:
+            best_parameters_itemKNNCF = hyperparams_tuning(ItemKNNCFRecommender)
+        else:
+            best_parameters_itemKNNCF = best_parameters_list["ItemKNNCFRecommender"]
+
+        # best_parameters_itemKNNCF = {'topK': 43, 'shrink': 997, 'similarity': 'cosine',
+        #                              'normalize': True, 'feature_weighting': 'TF-IDF'}
+
+        itemKNNCF.fit(**best_parameters_itemKNNCF)
+
+        ##########################################################################################
+
+        pureSVD = PureSVDRecommender(URM)
+
+        if apply_hyperparams_tuning:
+            best_parameters_pureSVD = hyperparams_tuning(PureSVDRecommender)
+        else:
+            best_parameters_pureSVD = best_parameters_list["PureSVDRecommender"]
+
+            # best_parameters_pureSVD = {'num_factors': 50}
+
+        pureSVD.fit(**best_parameters_pureSVD)
+
+        recommender = ItemKNNScoresHybridRecommender(URM, itemKNNCF, pureSVD)
+        best_parameters = {'alpha': 0.9}
+        recommender.fit(**best_parameters)
+
+    return recommender
+
+
 # Build URM, ICM and UCM
 # ----------------------
 
@@ -179,7 +311,6 @@ URM_train, URM_validation = split_train_leave_k_out_user_wise(URM_train,
                                                               k_out=k_out,
                                                               use_validation_set=False,
                                                               leave_random_out=True)
-
 
 # Recommenders
 # ------------
@@ -245,6 +376,35 @@ recommender_list = [
     CFW_D_Similarity_Linalg,
     ItemKNNScoresHybridRecommender
 ]
+
+
+
+# Best hyperparameters found by tuning
+# ------------------------------------
+
+best_parameters_list = {
+
+    # Collaborative recommenders
+    'ItemKNNCFRecommender': {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
+                             'feature_weighting': 'none'},
+
+#     UserKNNCFRecommender,
+
+    'MatrixFactorization_BPR_Cython': {'sgd_mode': 'adagrad', 'epochs': 1500, 'num_factors': 177, 'batch_size': 4,
+                                       'positive_reg': 2.3859950782265896e-05,
+                                       'negative_reg': 7.572911338047984e-05,
+                                       'learning_rate': 0.0005586331284886803},
+
+    'PureSVDRecommender' : {'num_factors': 50},
+
+    'P3alphaRecommender': {'topK': 23, 'alpha': 0.014269061954631738, 'normalize_similarity': True},
+
+    # Content-based recommenders
+
+    'ItemKNNCBFRecommender': {'topK': 972, 'shrink': 993, 'similarity': 'cosine', 'normalize': False,
+                              'feature_weighting': 'BM25'},
+
+}
 
 
 ################################################################################################################
@@ -422,169 +582,8 @@ while True:
         recommender_class = recommender_list[selected - 1]
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
-        apply_hyperparams_tuning = True
 
-
-        # Fit the recommender with the hyperparameters we just learned
-        # ------------------------------------------------------------
-
-        # Non-personalized
-        if recommender_class in non_personalized_list:
-            recommender = recommender_class(URM_train)
-            recommender.fit()
-
-        # Content-based
-        elif recommender_class in content_algorithm_list:
-            recommender = recommender_class(URM_train, ICM_all)  # todo: ICM_all or ICM_train?
-
-            if apply_hyperparams_tuning:
-                best_parameters_itemKNNCBF = hyperparams_tuning(recommender_class)
-            else:
-                # if recommender_class is ItemKNNCBFRecommender:
-                best_parameters_itemKNNCBF = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
-                                   'feature_weighting': 'none'}
-                # else:
-
-            recommender.fit(**best_parameters_itemKNNCBF)
-
-        # Collaborative-filtering
-        elif recommender_class in collaborative_algorithm_list:
-
-            recommender = recommender_class(URM_train)
-
-            if apply_hyperparams_tuning:
-                best_parameters = hyperparams_tuning(recommender_class)
-
-            recommender.fit(**best_parameters)
-
-        # Hybrid recommenders
-        elif recommender_class is ItemKNNSimilarityHybridRecommender:
-            # Hybrid: ItemKNNCF + P3alpha
-            itemKNNCF = ItemKNNCFRecommender(URM_train)
-
-            if apply_hyperparams_tuning:
-                best_parameters_itemKNNCF = hyperparams_tuning(ItemKNNCFRecommender)
-            else:
-                best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-                                   'feature_weighting': 'none'}
-
-            itemKNNCF.fit(**best_parameters_itemKNNCF)
-
-            P3alpha = P3alphaRecommender(URM_train)
-
-            if apply_hyperparams_tuning:
-                best_parameters_P3alpha = hyperparams_tuning(P3alphaRecommender)
-            # else:
-            #     best_parameters_P3alpha = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-            #                        'feature_weighting': 'none'}
-
-            P3alpha.fit(**best_parameters_P3alpha)
-
-            recommender = recommender_class(URM_train, itemKNNCF.W_sparse, P3alpha.W_sparse)
-            best_parameters = {'alpha': 0.7}
-            recommender.fit(**best_parameters)
-
-            # Hybrid: ItemKNNCF + itemKNNCBF
-            # itemKNNCBF = ItemKNNCBFRecommender(URM_train, ICM_all)
-            #
-            # if apply_hyperparams_tuning:
-            #     best_parameters_itemKNNCBF = hyperparams_tuning(ItemKNNCBFRecommender)
-            # else:
-            #     best_parameters_itemKNNCBF = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
-            #                    'feature_weighting': 'none'}
-            #
-            # itemKNNCBF.fit(**best_parameters_itemKNNCBF)
-            #
-            # recommender = recommender_class(URM_train, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
-            # best_parameters = {'alpha': 0.8}
-            # recommender.fit(**best_parameters)
-
-        elif recommender_class is CFW_D_Similarity_Linalg:
-            # feature weighting techniques
-            itemKNNCF = ItemKNNCFRecommender(URM_train)
-
-            if apply_hyperparams_tuning:
-                best_parameters_itemKNNCF = hyperparams_tuning(ItemKNNCFRecommender)
-            else:
-                best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-                                             'feature_weighting': 'none'}
-
-            itemKNNCF.fit(**best_parameters_itemKNNCF)
-
-            W_sparse_CF = itemKNNCF.W_sparse
-
-            # hyperparams tuning
-            # if recommender_class is CFW_D_Similarity_Linalg:
-            #     hyperparameters_range_dictionary = {}
-            #     hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
-            #     hyperparameters_range_dictionary["add_zeros_quota"] = Real(low=0, high=1, prior='uniform')
-            #     hyperparameters_range_dictionary["normalize_similarity"] = Categorical([True, False])
-            #
-            #     recommender_input_args = SearchInputRecommenderArgs(
-            #         CONSTRUCTOR_POSITIONAL_ARGS=[URM_train, ICM_all, W_sparse_CF],
-            #         CONSTRUCTOR_KEYWORD_ARGS={},
-            #         FIT_POSITIONAL_ARGS=[],
-            #         FIT_KEYWORD_ARGS={}
-            #     )
-
-            # output_folder_path = "result_experiments/"
-            #
-            # import os
-            #
-            # # If directory does not exist, create
-            # if not os.path.exists(output_folder_path):
-            #     os.makedirs(output_folder_path)
-            #
-            # n_cases = 10
-            # metric_to_optimize = "MAP"
-            #
-            # # Clone data structure to perform the fitting with the best hyperparameters on train + validation data
-            # recommender_input_args_last_test = recommender_input_args.copy()
-            # recommender_input_args_last_test.CONSTRUCTOR_POSITIONAL_ARGS[0] = URM_train + URM_validation
-            #
-            # parameterSearch.search(recommender_input_args,
-            #                        recommender_input_args_last_test=recommender_input_args_last_test,
-            #                        parameter_search_space=hyperparameters_range_dictionary,
-            #                        n_cases=n_cases,
-            #                        n_random_starts=int(n_cases / 3),
-            #                        save_model="no",
-            #                        output_folder_path=output_folder_path,
-            #                        output_file_name_root=recommender_class.RECOMMENDER_NAME,
-            #                        metric_to_optimize=metric_to_optimize
-            #                        )
-            #
-
-            # Weighted Content-based similarity
-            recommender = recommender_class(URM_train, ICM_all, W_sparse_CF)
-            recommender.fit()
-
-        elif recommender_class is ItemKNNScoresHybridRecommender:
-            # Hybrid: ItemKNNCF + pureSVD
-            itemKNNCF = ItemKNNCFRecommender(URM_train)
-
-            if apply_hyperparams_tuning:
-                best_parameters_itemKNNCF = hyperparams_tuning(ItemKNNCFRecommender)
-            else:
-                best_parameters_itemKNNCF = {'topK': 43, 'shrink': 997, 'similarity': 'cosine',
-                                             'normalize': True, 'feature_weighting': 'TF-IDF'}
-
-            itemKNNCF.fit(**best_parameters_itemKNNCF)
-
-            ##########################################################################################
-
-            pureSVD = PureSVDRecommender(URM_train)
-
-            if apply_hyperparams_tuning:
-                best_parameters_pureSVD = hyperparams_tuning(PureSVDRecommender)
-            else:
-                best_parameters_pureSVD = {'num_factors': 50}
-
-            pureSVD.fit(**best_parameters_pureSVD)
-
-            recommender = recommender_class(URM_train, itemKNNCF, pureSVD)
-            best_parameters = {'alpha': 0.9}
-            recommender.fit(**best_parameters)
-
+        recommender = fit_recommender(URM_train, ICM_all)
 
         # Evaluate model
         # --------------
@@ -604,89 +603,7 @@ while True:
             # Train the model on the whole dataset using tuned params
             # -------------------------------------------------------
 
-            # Non-personalized
-            if recommender_class in non_personalized_list:
-                recommender = recommender_class(URM_all)
-                recommender.fit()
-
-            # Content-based
-            elif recommender_class in content_algorithm_list:
-                recommender = recommender_class(URM_all, ICM_all)
-                best_parameters_itemKNNCBF = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
-                                                  'feature_weighting': 'none'}
-                recommender.fit(**best_parameters_itemKNNCBF)
-
-            # Collaborative-filtering
-            elif recommender_class in collaborative_algorithm_list: #todo: check hyperparams
-
-                recommender = recommender_class(URM_all)
-
-                if apply_hyperparams_tuning:
-                    best_parameters = hyperparams_tuning(recommender_class)
-
-                recommender.fit(**best_parameters)
-
-            # Hybrid recommenders
-            elif recommender_class is ItemKNNSimilarityHybridRecommender:
-                # Hybrid: ItemKNNCF + P3alpha
-                itemKNNCF = ItemKNNCFRecommender(URM_all)
-                best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-                                                 'feature_weighting': 'none'}
-
-                itemKNNCF.fit(**best_parameters_itemKNNCF)
-
-                P3alpha = P3alphaRecommender(URM_all)
-                P3alpha.fit()
-
-                recommender = recommender_class(URM_all, itemKNNCF.W_sparse, P3alpha.W_sparse)
-                best_parameters = {'alpha': 0.7}
-                recommender.fit(**best_parameters)
-
-                # Hybrid: ItemKNNCF + itemKNNCBF
-                # itemKNNCBF = ItemKNNCBFRecommender(URM_all, ICM_all)
-                #
-                # best_parameters_itemKNNCBF = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
-                #                    'feature_weighting': 'none'}
-                #
-                # itemKNNCBF.fit(**best_parameters_itemKNNCBF)
-                #
-                # recommender = recommender_class(URM_all, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
-                # best_parameters = {'alpha': 0.8}
-                # recommender.fit(**best_parameters)
-
-            elif recommender_class is CFW_D_Similarity_Linalg:
-                # feature weighting techniques
-                itemKNNCF = ItemKNNCFRecommender(URM_all)
-                best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-                                                 'feature_weighting': 'none'}
-
-                itemKNNCF.fit(**best_parameters_itemKNNCF)
-
-                W_sparse_CF = itemKNNCF.W_sparse
-
-                # Weighted Content-based similarity
-                recommender = recommender_class(URM_all, ICM_all, W_sparse_CF)
-                recommender.fit()
-
-            elif recommender_class is ItemKNNScoresHybridRecommender:
-                # Hybrid: ItemKNNCF + pureSVD
-                itemKNNCF = ItemKNNCFRecommender(URM_all)
-                best_parameters_itemKNNCF = {'topK': 43, 'shrink': 997, 'similarity': 'cosine',
-                                                 'normalize': True, 'feature_weighting': 'TF-IDF'}
-
-                itemKNNCF.fit(**best_parameters_itemKNNCF)
-
-                ##########################################################################################
-
-                pureSVD = PureSVDRecommender(URM_all)
-                best_parameters_pureSVD = {'num_factors': 50}
-
-                pureSVD.fit(**best_parameters_pureSVD)
-
-                recommender = recommender_class(URM_all, itemKNNCF, pureSVD)
-                best_parameters = {'alpha': 0.9}
-                recommender.fit(**best_parameters)
-
+            recommender = fit_recommender(URM_all, ICM_all)
 
             user_id_array = get_target_users()
             item_list = recommender.recommend(user_id_array,
