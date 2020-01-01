@@ -4,7 +4,6 @@
 import traceback, os
 import numpy as np
 from utils.data_manager import build_URM, build_ICM, build_UCM, get_statistics_URM, get_target_users
-from utils.evaluation import evaluate_algorithm
 from utils.Evaluation.Evaluator import EvaluatorHoldout
 from utils.ParameterTuning.hyperparameter_search import runParameterSearch_Collaborative, runParameterSearch_Content
 from utils.DataIO import DataIO
@@ -160,11 +159,13 @@ def fit_recommender(recommender_class, URM, ICM=None):
     apply_hyperparams_tuning = False
 
     # Non-personalized
+    # ----------------
     if recommender_class in non_personalized_list:
         recommender = recommender_class(URM)
         recommender.fit()
 
     # Content-based and Collaborative recommenders
+    # --------------------------------------------
     elif recommender_class in content_algorithm_list or \
             recommender_class in collaborative_algorithm_list:
 
@@ -521,20 +522,20 @@ def recommendations_quality_by_group():
     # --------------------------
 
     profile_length = np.ediff1d(URM_train.indptr)  # users' profile
-    block_size = int(len(profile_length) * 0.25)
+    block_size = int(len(profile_length) * 0.15)
     n_users, n_items = URM_train.shape
     num_groups = int(np.ceil(n_users / block_size))
     sorted_users = np.argsort(profile_length)
 
     MAP_topPop_per_group = []
-    # MAP_itemKNNCF_per_group = []
-    # MAP_itemKNNCBF_per_group = []
+    MAP_itemKNNCF_per_group = [] #
+    MAP_itemKNNCBF_per_group = [] #
     MAP_itemCBF_similarity_hybrid_per_group = []
     MAP_itemCF_alpha_similarity_hybrid_per_group = []
     MAP_itemCF_beta_similarity_hybrid_per_group = []
     MAP_itemCF_alpha_beta_similarity_hybrid_per_group = []
     MAP_alpha_beta_similarity_hybrid_per_group = []
-    # MAP_itemCF_scores_hybrid_per_group = []
+    MAP_itemCF_scores_hybrid_per_group = [] #
 
     for group_id in range(0, num_groups):
         start_pos = group_id * block_size
@@ -560,11 +561,11 @@ def recommendations_quality_by_group():
         results, _ = evaluator_test.evaluateRecommender(topPop)
         MAP_topPop_per_group.append(results[cutoff]["MAP"])
 
-        # results, _ = evaluator_test.evaluateRecommender(itemKNNCF)
-        # MAP_itemKNNCF_per_group.append(results[cutoff]["MAP"])
+        results, _ = evaluator_test.evaluateRecommender(itemKNNCF)
+        MAP_itemKNNCF_per_group.append(results[cutoff]["MAP"]) #
 
-        # results, _ = evaluator_test.evaluateRecommender(itemKNNCBF)
-        # MAP_itemKNNCBF_per_group.append(results[cutoff]["MAP"])
+        results, _ = evaluator_test.evaluateRecommender(itemKNNCBF)
+        MAP_itemKNNCBF_per_group.append(results[cutoff]["MAP"]) #
 
         results, _ = evaluator_test.evaluateRecommender(itemCBF_similarity_hybrid)
         MAP_itemCBF_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
@@ -581,18 +582,18 @@ def recommendations_quality_by_group():
         results, _ = evaluator_test.evaluateRecommender(alpha_beta_similarity_hybrid)
         MAP_alpha_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
 
-        # results, _ = evaluator_test.evaluateRecommender(itemCF_scores_hybrid)
-        # MAP_itemCF_scores_hybrid_per_group.append(results[cutoff]["MAP"])
+        results, _ = evaluator_test.evaluateRecommender(itemCF_scores_hybrid)
+        MAP_itemCF_scores_hybrid_per_group.append(results[cutoff]["MAP"]) #
 
     print("plotting.....")
 
     import matplotlib.pyplot as pyplot
 
     pyplot.plot(MAP_topPop_per_group, label="topPop")
-    # pyplot.plot(MAP_itemKNNCF_per_group, label="itemKNNCF")
-    # pyplot.plot(MAP_itemKNNCBF_per_group, label="itemKNNCBF")
+    pyplot.plot(MAP_itemKNNCF_per_group, label="itemKNNCF") #
+    pyplot.plot(MAP_itemKNNCBF_per_group, label="itemKNNCBF") #
     pyplot.plot(MAP_itemCBF_similarity_hybrid_per_group, label="ItemKNNCF + ItemKNNCBF")
-    # pyplot.plot(MAP_itemCF_scores_hybrid_per_group, label="ItemKNNCF + pureSVD")
+    pyplot.plot(MAP_itemCF_scores_hybrid_per_group, label="ItemKNNCF + pureSVD") #
     pyplot.plot(MAP_itemCF_alpha_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha")
     pyplot.plot(MAP_itemCF_beta_similarity_hybrid_per_group, label="ItemKNNCF + RP3beta")
     pyplot.plot(MAP_itemCF_alpha_beta_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha + RP3beta")
@@ -603,90 +604,92 @@ def recommendations_quality_by_group():
     pyplot.show()
 
 
-recommendations_quality_by_group()
-exit(0)
+# recommendations_quality_by_group()
+# exit(0)
 
 ################################################################################################################
 
-# --- generate predictions --- #
+def recommendations_with_fallback():
 
-# Train models on the whole dataset
-# TopPop
-# topPop = TopPopRecommender(URM_all)
-# topPop.fit()
-#
-# # Hybrid: ItemKNNCF + pureSVD
-# # ItemKNNCFRecommender
-# itemKNNCF = ItemKNNCFRecommender(URM_all)
-# best_parameters_ItemKNNCF = {'topK': 43, 'shrink': 997, 'similarity': 'cosine',
-#                                  'normalize': True, 'feature_weighting': 'TF-IDF'}
-# itemKNNCF.fit(**best_parameters_ItemKNNCF)
-#
-# # PureSVD
-# pureSVD = PureSVDRecommender(URM_all)
-# best_parameters_PureSVD = {'num_factors': 50}
-# pureSVD.fit(**best_parameters_PureSVD)
-#
-# itemKNN_scores_hybrid = ItemKNNScoresHybridRecommender(URM_all, itemKNNCF, pureSVD)
-# best_parameters = {'alpha': 0.9}
-# itemKNN_scores_hybrid.fit(**best_parameters)
-#
+    # Train models on the whole dataset
+    # ---------------------------------
 
-#
-# profile_length = np.ediff1d(URM_all.indptr)
-# block_size = int(len(profile_length) * 0.15)
-# n_users, n_items = URM_all.shape
-# num_groups = int(np.ceil(n_users / block_size))
-# sorted_users = np.argsort(profile_length)
-#
-# users_by_group = []
-#
-# for group_id in range(0, num_groups):
-#     start_pos = group_id * block_size
-#     end_pos = min((group_id + 1) * block_size, len(profile_length))
-#
-#     users_in_group = sorted_users[start_pos:end_pos]
-#
-#     users_in_group_p_len = profile_length[users_in_group]
-#
-#     print("Group {} with users_in_group {}, average p.len {:.2f}, min {}, max {}".format(group_id,
-#                                                                                          len(users_in_group),
-#                                                                                          users_in_group_p_len.mean(),
-#                                                                                          users_in_group_p_len.min(),
-#                                                                                          users_in_group_p_len.max()))
-#
-#     # Users by group
-#     users_by_group.append(users_in_group)
-#
-#
-# # Generate predictions
-# user_id_array = get_target_users()
-# items = []
-#
-# for user_id in user_id_array:
-#
-#     # TopPop for users with fewer interactions
-#     if user_id in users_by_group[0] or \
-#             user_id in users_by_group[1]:
-#         # print("user_id: {}, group: 0 or 1, topPop".format(user_id))
-#         item_list = topPop.recommend(user_id,
-#                                      cutoff=cutoff,
-#                                      remove_seen_flag=False,
-#                                      remove_top_pop_flag=False)
-#     else:
-#         # print("user_id: {}, group: 2, 3, 4, itemKNN_scores_hybrid".format(user_id))
-#         item_list = itemKNN_scores_hybrid.recommend(user_id,
-#                                                     cutoff=cutoff,
-#                                                     remove_seen_flag=True,
-#                                                     remove_top_pop_flag=True)
-#
-#     items.append(np.array(item_list))
-#
-#
-# # save predictions on csv file
-# create_csv(user_id_array, items, None)
-#
-# exit(0)
+    # TopPop
+    topPop = fit_recommender(TopPopRecommender, URM_all)
+
+    # ItemCF
+    itemKNNCF = fit_recommender(ItemKNNCFRecommender, URM_all)
+
+    # P3alpha
+    P3alpha = fit_recommender(P3alphaRecommender, URM_all)
+
+    # ItemKNNCF + P3alpha
+    itemCF_alpha_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_all, itemKNNCF.W_sparse, P3alpha.W_sparse)
+    best_parameters = {'alpha': 0.6}
+    itemCF_alpha_similarity_hybrid.fit(**best_parameters)
+
+    # User-wise discrimination
+    # --------------------------
+
+    profile_length = np.ediff1d(URM_all.indptr)  # users' profile
+    block_size = int(len(profile_length) * 0.15)
+    n_users, n_items = URM_all.shape
+    num_groups = int(np.ceil(n_users / block_size))
+    sorted_users = np.argsort(profile_length)
+
+
+    users_by_group = []
+
+    for group_id in range(0, num_groups):
+        start_pos = group_id * block_size
+        end_pos = min((group_id + 1) * block_size, len(profile_length))
+
+        users_in_group = sorted_users[start_pos:end_pos]
+
+        users_in_group_p_len = profile_length[users_in_group]
+
+        print("Group {} with users_in_group {}, average p.len {:.2f}, min {}, max {}".format(group_id,
+                                                                                             len(users_in_group),
+                                                                                             users_in_group_p_len.mean(),
+                                                                                             users_in_group_p_len.min(),
+                                                                                             users_in_group_p_len.max()))
+
+        # Users by group
+        users_by_group.append(users_in_group)
+
+
+    # Generate predictions
+    user_id_array = get_target_users()
+    items = []
+
+    print("Generating predictions ... ")
+    for user_id in user_id_array:
+
+        # TopPop for users with fewer interactions
+        if user_id in users_by_group[0] or \
+                user_id in users_by_group[1]:
+            # print("user_id: {}, group: 0 or 1, topPop".format(user_id))
+            item_list = topPop.recommend(user_id,
+                                         cutoff=cutoff,
+                                         remove_seen_flag=False,
+                                         remove_top_pop_flag=False)
+        else:
+            # print("user_id: {}, group: 2, 3, 4, itemCF_alpha_similarity_hybrid".format(user_id))
+            item_list = itemCF_alpha_similarity_hybrid.recommend(user_id,
+                                                        cutoff=cutoff,
+                                                        remove_seen_flag=True,
+                                                        remove_top_pop_flag=True)
+
+        items.append(np.array(item_list))
+        print("user_id: ", user_id)
+
+
+    # save predictions on csv file
+    create_csv(user_id_array, items, None)
+
+
+recommendations_with_fallback()
+exit(0)
 
 
 ################################################################################################################
