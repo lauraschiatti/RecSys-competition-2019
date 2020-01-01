@@ -63,8 +63,8 @@ def build_URM():
     URM = csr_sparse_matrix(rating_list, user_list, item_list)
 
     print("URM built!")
-    print(URM[1:3, :].todense())
-    print("\n")
+    # print(URM[1:3, :].todense())
+    # print("\n")
 
     return URM
 
@@ -211,8 +211,8 @@ def build_ICM():
     # item_feature_ratios(ICM_all)
 
     print("ICM built!")
-    print(ICM_all[1:3, :].todense())
-    print("\n")
+    # print(ICM_all[1:3, :].todense())
+    # print("\n")
 
     return ICM_all
 
@@ -272,9 +272,8 @@ def build_UCM(URM):
     # item_feature_ratios(ICM_all)
 
     print("UCM built!")
-    print(UCM_all[1:3, :].todense())
-    print("\n")
-
+    # print(UCM_all[1:3, :].todense())
+    # print("\n")
 
     return UCM_all
 

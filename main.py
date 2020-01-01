@@ -181,10 +181,11 @@ def fit_recommender(recommender_class, URM, ICM=None):
 
         recommender.fit(**best_parameters)
 
-    # Hybrid recommenders
+    # Similarity Hybrid: linear combination of item-based models
+    # ----------------------------------------------------------
     elif recommender_class is ItemKNNSimilarityHybridRecommender:
-        # Hybrid: ItemKNNCF + P3alpha
 
+        # itemKNNCF
         itemKNNCF = ItemKNNCFRecommender(URM)
 
         if apply_hyperparams_tuning:
@@ -192,13 +193,19 @@ def fit_recommender(recommender_class, URM, ICM=None):
         else:
             best_parameters_itemKNNCF = best_parameters_list["ItemKNNCFRecommender"]
 
-            # best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-            #                    'feature_weighting': 'none'}
-
         itemKNNCF.fit(**best_parameters_itemKNNCF)
 
-        ##########################################################################################
+        # itemKNNCBF
+        itemKNNCBF = ItemKNNCBFRecommender(URM, ICM)
 
+        if apply_hyperparams_tuning:
+            best_parameters_itemKNNCBF = hyperparams_tuning(ItemKNNCBFRecommender)
+        else:
+            best_parameters_itemKNNCBF = best_parameters_list["ItemKNNCBFRecommender"]
+
+        itemKNNCBF.fit(**best_parameters_itemKNNCBF)
+
+        # P3alpha
         P3alpha = P3alphaRecommender(URM)
 
         if apply_hyperparams_tuning:
@@ -206,30 +213,65 @@ def fit_recommender(recommender_class, URM, ICM=None):
         else:
             best_parameters_P3alpha = best_parameters_list["P3alphaRecommender"]
 
-            # best_parameters_P3alpha = {'topK': 23, 'alpha': 0.014269061954631738, 'normalize_similarity': True}
-
         P3alpha.fit(**best_parameters_P3alpha)
 
-        recommender = ItemKNNSimilarityHybridRecommender(URM, itemKNNCF.W_sparse, P3alpha.W_sparse)
+        # RP3beta
+        RP3beta = RP3betaRecommender(URM)
+
+        if apply_hyperparams_tuning:
+            best_parameters_RP3beta = hyperparams_tuning(RP3betaRecommender)
+        else:
+            best_parameters_RP3beta = best_parameters_list["RP3betaRecommender"]
+
+        P3alpha.fit(**best_parameters_RP3beta)
+
+        ##########################################################################################
+
+        # ItemKNNCF + itemKNNCBF
+        itemCBF_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse,
+                                                                       itemKNNCBF.W_sparse)
         best_parameters = {'alpha': 0.6}
-        recommender.fit(**best_parameters)
+        itemCBF_similarity_hybrid.fit(**best_parameters)
 
-        # Hybrid: ItemKNNCF + itemKNNCBF
-        # itemKNNCBF = ItemKNNCBFRecommender(URM_train, ICM_all)
-        #
-        # if apply_hyperparams_tuning:
-        #     best_parameters_itemKNNCBF = hyperparams_tuning(ItemKNNCBFRecommender)
-        # else:
-        #     best_parameters_itemKNNCBF = {'topK': 983, 'shrink': 18, 'similarity': 'cosine', 'normalize': True,
-        #                    'feature_weighting': 'none'}
-        #
-        # itemKNNCBF.fit(**best_parameters_itemKNNCBF)
-        #
-        # recommender = recommender_class(URM_train, itemKNNCF.W_sparse, itemKNNCBF.W_sparse)
-        # best_parameters = {'alpha': 0.8}
-        # recommender.fit(**best_parameters)
+        ##########################################################################################
 
-    # feature weighting techniques
+        # ItemKNNCF + P3alpha
+        itemCF_alpha_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse,
+                                                                            P3alpha.W_sparse)
+        best_parameters = {'alpha': 0.6}
+        itemCF_alpha_similarity_hybrid.fit(**best_parameters)
+
+        ##########################################################################################
+
+        # ItemKNNCF + RP3beta
+        itemCF_beta_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse,
+                                                                           RP3beta.W_sparse)
+        best_parameters = {'alpha': 0.6}
+        itemCF_beta_similarity_hybrid.fit(**best_parameters)
+
+        ##########################################################################################
+
+        # P3alpha + RP3beta
+        alpha_beta_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, P3alpha.W_sparse,
+                                                                          RP3beta.W_sparse)
+        best_parameters = {'alpha': 0.6}
+        alpha_beta_similarity_hybrid.fit(**best_parameters)
+
+        ##########################################################################################
+
+        # ItemKNNCF + P3alpha + RP3beta
+        itemCF_alpha_beta_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse,
+                                                                                 alpha_beta_similarity_hybrid.W_sparse)
+        best_parameters = {'alpha': 0.6}
+        itemCF_alpha_beta_similarity_hybrid.fit(**best_parameters)
+
+        ##########################################################################################
+
+        # recommender to retrieve
+        recommender = itemKNNCF
+
+    # Feature weighting techniques
+    # ----------------------------
     elif recommender_class is CFW_D_Similarity_Linalg:
 
         itemKNNCF = ItemKNNCFRecommender(URM)
@@ -250,8 +292,10 @@ def fit_recommender(recommender_class, URM, ICM=None):
         recommender = CFW_D_Similarity_Linalg(URM, ICM, W_sparse_CF)
         recommender.fit()
 
+    # Score Hybrid: linear combination of heterogeneous models (combination of predictions)
+    # --------------------------------------------------------------------------------------
     elif recommender_class is ItemKNNScoresHybridRecommender:
-        # Hybrid: ItemKNNCF + pureSVD
+
         itemKNNCF = ItemKNNCFRecommender(URM)
 
         if apply_hyperparams_tuning:
@@ -259,12 +303,7 @@ def fit_recommender(recommender_class, URM, ICM=None):
         else:
             best_parameters_itemKNNCF = best_parameters_list["ItemKNNCFRecommender"]
 
-        # best_parameters_itemKNNCF = {'topK': 43, 'shrink': 997, 'similarity': 'cosine',
-        #                              'normalize': True, 'feature_weighting': 'TF-IDF'}
-
         itemKNNCF.fit(**best_parameters_itemKNNCF)
-
-        ##########################################################################################
 
         pureSVD = PureSVDRecommender(URM)
 
@@ -277,9 +316,11 @@ def fit_recommender(recommender_class, URM, ICM=None):
 
         pureSVD.fit(**best_parameters_pureSVD)
 
-        recommender = ItemKNNScoresHybridRecommender(URM, itemKNNCF, pureSVD)
+
+        # ItemKNNCF + pureSVD
+        itemCF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
         best_parameters = {'alpha': 0.6}
-        recommender.fit(**best_parameters)
+        itemCF_scores_hybrid.fit(**best_parameters)
 
     return recommender
 
@@ -436,6 +477,7 @@ def recommendations_quality_by_group():
     # PureSVD
     pureSVD = fit_recommender(PureSVDRecommender, URM_train)
 
+
     # Similarity Hybrid: linear combination of item-based models
     # ----------------------------------------------------------
 
@@ -455,9 +497,16 @@ def recommendations_quality_by_group():
     itemCF_beta_similarity_hybrid.fit(**best_parameters)
 
     # P3alpha + RP3beta
-    itemCF_alpha_beta_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, P3alpha.W_sparse, RP3beta.W_sparse)
+    alpha_beta_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, P3alpha.W_sparse, RP3beta.W_sparse)
+    best_parameters = {'alpha': 0.6}
+    alpha_beta_similarity_hybrid.fit(**best_parameters)
+
+    # ItemKNNCF + P3alpha + RP3beta
+    itemCF_alpha_beta_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_train, itemKNNCF.W_sparse,
+                                                                             alpha_beta_similarity_hybrid.W_sparse)
     best_parameters = {'alpha': 0.6}
     itemCF_alpha_beta_similarity_hybrid.fit(**best_parameters)
+
 
     # Score Hybrid: linear combination of heterogeneous models (combination of predictions)
     # --------------------------------------------------------------------------------------
@@ -467,11 +516,12 @@ def recommendations_quality_by_group():
     best_parameters = {'alpha': 0.6}
     itemCF_scores_hybrid.fit(**best_parameters)
 
-    # # User-wise discrimination
+
+    # User-wise discrimination
     # --------------------------
 
     profile_length = np.ediff1d(URM_train.indptr)  # users' profile
-    block_size = int(len(profile_length) * 0.15)
+    block_size = int(len(profile_length) * 0.25)
     n_users, n_items = URM_train.shape
     num_groups = int(np.ceil(n_users / block_size))
     sorted_users = np.argsort(profile_length)
@@ -479,10 +529,11 @@ def recommendations_quality_by_group():
     MAP_topPop_per_group = []
     # MAP_itemKNNCF_per_group = []
     # MAP_itemKNNCBF_per_group = []
-    # MAP_itemCBF_similarity_hybrid_per_group = []
+    MAP_itemCBF_similarity_hybrid_per_group = []
     MAP_itemCF_alpha_similarity_hybrid_per_group = []
     MAP_itemCF_beta_similarity_hybrid_per_group = []
     MAP_itemCF_alpha_beta_similarity_hybrid_per_group = []
+    MAP_alpha_beta_similarity_hybrid_per_group = []
     # MAP_itemCF_scores_hybrid_per_group = []
 
     for group_id in range(0, num_groups):
@@ -515,8 +566,8 @@ def recommendations_quality_by_group():
         # results, _ = evaluator_test.evaluateRecommender(itemKNNCBF)
         # MAP_itemKNNCBF_per_group.append(results[cutoff]["MAP"])
 
-        # results, _ = evaluator_test.evaluateRecommender(itemCBF_similarity_hybrid)
-        # MAP_itemCBF_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+        results, _ = evaluator_test.evaluateRecommender(itemCBF_similarity_hybrid)
+        MAP_itemCBF_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
 
         results, _ = evaluator_test.evaluateRecommender(itemCF_alpha_similarity_hybrid)
         MAP_itemCF_alpha_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
@@ -526,6 +577,9 @@ def recommendations_quality_by_group():
 
         results, _ = evaluator_test.evaluateRecommender(itemCF_alpha_beta_similarity_hybrid)
         MAP_itemCF_alpha_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+
+        results, _ = evaluator_test.evaluateRecommender(alpha_beta_similarity_hybrid)
+        MAP_alpha_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
 
         # results, _ = evaluator_test.evaluateRecommender(itemCF_scores_hybrid)
         # MAP_itemCF_scores_hybrid_per_group.append(results[cutoff]["MAP"])
@@ -537,11 +591,12 @@ def recommendations_quality_by_group():
     pyplot.plot(MAP_topPop_per_group, label="topPop")
     # pyplot.plot(MAP_itemKNNCF_per_group, label="itemKNNCF")
     # pyplot.plot(MAP_itemKNNCBF_per_group, label="itemKNNCBF")
-    # pyplot.plot(MAP_itemCBF_similarity_hybrid_per_group, label="ItemKNNCF + ItemKNNCBF")
+    pyplot.plot(MAP_itemCBF_similarity_hybrid_per_group, label="ItemKNNCF + ItemKNNCBF")
     # pyplot.plot(MAP_itemCF_scores_hybrid_per_group, label="ItemKNNCF + pureSVD")
-    pyplot.plot(MAP_itemCF_alpha_beta_similarity_hybrid_per_group, label="P3alpha + RP3beta")
     pyplot.plot(MAP_itemCF_alpha_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha")
     pyplot.plot(MAP_itemCF_beta_similarity_hybrid_per_group, label="ItemKNNCF + RP3beta")
+    pyplot.plot(MAP_itemCF_alpha_beta_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha + RP3beta")
+    pyplot.plot(MAP_alpha_beta_similarity_hybrid_per_group, label="P3alpha + RP3beta")
     pyplot.ylabel('MAP')
     pyplot.xlabel('User Group')
     pyplot.legend()
