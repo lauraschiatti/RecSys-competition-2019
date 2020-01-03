@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 
-import traceback, os
+import traceback
+import os
 import numpy as np
 from utils.data_manager import build_URM, build_ICM, build_UCM, get_statistics_URM, get_target_users
 from utils.Evaluation.Evaluator import EvaluatorHoldout
@@ -59,10 +60,100 @@ from recommenders.Hybrid.CFW_D_Similarity_Linalg import CFW_D_Similarity_Linalg
 from recommenders.Hybrid.ItemKNNScoresHybridRecommender import ItemKNNScoresHybridRecommender
 
 
+# Build URM, ICM and UCM
+# ----------------------
+
+URM_all = build_URM()
+ICM_all = build_ICM()
+UCM_all = build_UCM(URM_all)
+# get_statistics_URM(URM_all)
+
+cutoff = 10  # k recommended_items
+
+# URM train/validation/test splitting
+# -----------------------------------
+k_out = 1
+
+# URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
+# URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
+
+URM_train, URM_test = split_train_leave_k_out_user_wise(URM_all,
+                                                        k_out=k_out,
+                                                        use_validation_set=False,
+                                                        leave_random_out=True)
+
+URM_train, URM_validation = split_train_leave_k_out_user_wise(URM_train,
+                                                              k_out=k_out,
+                                                              use_validation_set=False,
+                                                              leave_random_out=True)
+
+# Non-personalized recommenders
+non_personalized_list = [
+    RandomRecommender,
+    TopPopRecommender
+]
+
+# Collaborative recommenders
+collaborative_algorithm_list = [
+    ItemKNNCFRecommender,
+    UserKNNCFRecommender,
+    #     MatrixFactorization_BPR_Cython,
+    # MatrixFactorization_FunkSVD_Cython,
+    PureSVDRecommender,
+    # SLIM_BPR_Cython,
+    # SLIMElasticNetRecommender,
+
+    # Graph-based
+    P3alphaRecommender,
+    RP3betaRecommender,
+]
+
+# Content-based recommenders
+content_algorithm_list = [
+    ItemKNNCBFRecommender,
+    UserKNNCBFRecommender
+]
+
+# Hybrid recommenders
+hybrid_algorithm_list = [
+    ItemKNNSimilarityHybridRecommender,  # Linear combination of item-based models
+    CFW_D_Similarity_Linalg,  # regression problem using linalg solver
+    ItemKNNScoresHybridRecommender  # Linear combination of predictions
+]
+
+recommender_list = [
+    # Non-personalized
+    RandomRecommender,
+    TopPopRecommender,
+
+    # Graph-based recommenders
+    P3alphaRecommender,
+    RP3betaRecommender,
+
+    # Collaborative recommenders
+    ItemKNNCFRecommender,
+    UserKNNCFRecommender,
+
+    #     MatrixFactorization_BPR_Cython,
+    # MatrixFactorization_FunkSVD_Cython,
+    PureSVDRecommender,
+    # SLIM_BPR_Cython,
+    # SLIMElasticNetRecommender,
+
+    # Content-based recommenders
+    ItemKNNCBFRecommender,
+    UserKNNCBFRecommender,
+
+    # Hybrid recommenders
+    ItemKNNSimilarityHybridRecommender,
+    CFW_D_Similarity_Linalg,
+    ItemKNNScoresHybridRecommender
+]
+
+
 # Hyperparameters tuning
 # ----------------------
 def hyperparams_tuning(recommender_class):
-    global URM_train, URM_validation, URM_test, cutoff
 
     metric_to_optimize = "MAP"
 
@@ -84,8 +175,6 @@ def hyperparams_tuning(recommender_class):
     allow_weighting = True  # provides better results
     similarity_type_list = ["cosine"]
     similarity_type = similarity_type_list[0]  # KNN Recommenders on similarity_type
-
-    ICM_name = "ICM_all"
 
     output_file_name_root = "{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME)
 
@@ -118,15 +207,21 @@ def hyperparams_tuning(recommender_class):
 
     # Content-based
     elif recommender_class in [ItemKNNCBFRecommender, UserKNNCBFRecommender]:
-        print("content")
+        ICM_object = ICM_all
+        ICM_name = "ICM_all"
+
+        if UserKNNCBFRecommender:
+            ICM_object = UCM_all
+            ICM_name = "UCM_all"
 
         output_file_name_root = "{}_{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
                                                                ICM_name, similarity_type)
 
+
         try:
             runParameterSearch_Content(recommender_class=recommender_class,
                                        URM_train=URM_train,
-                                       ICM_object=ICM_all,
+                                       ICM_object=ICM_object,
                                        ICM_name=ICM_name,
                                        n_cases=n_cases,
                                        n_random_starts=n_random_starts,
@@ -142,6 +237,51 @@ def hyperparams_tuning(recommender_class):
             print("On recommender {} Exception {}".format(recommender_class, str(e)))
             traceback.print_exc()
 
+
+        # from utils.ParameterTuning.SearchBayesianSkopt import SearchBayesianSkopt
+        # from utils.ParameterTuning.SearchAbstractClass import SearchInputRecommenderArgs
+        # from skopt.space import Real, Integer, Categorical
+        # # import traceback
+        #
+        #
+        # parameterSearch = SearchBayesianSkopt(recommender_class,
+        #                                       evaluator_validation=evaluator_validation,
+        #                                       evaluator_test=evaluator_test)
+        #
+        # hyperparameters_range_dictionary = {}
+        # hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
+        # hyperparameters_range_dictionary["shrink"] = Integer(0, 1000)
+        # hyperparameters_range_dictionary["similarity"] = Categorical(["cosine"])
+        # hyperparameters_range_dictionary["normalize"] = Categorical([True, False])
+        #
+        # recommender_input_args = SearchInputRecommenderArgs(
+        #     CONSTRUCTOR_POSITIONAL_ARGS=[URM_train, ICM_object],
+        #     CONSTRUCTOR_KEYWORD_ARGS={},
+        #     FIT_POSITIONAL_ARGS=[],
+        #     FIT_KEYWORD_ARGS={}
+        # )
+        #
+        # output_folder_path = "result_experiments/"
+        #
+        # # import os
+        #
+        # # If directory does not exist, create
+        # if not os.path.exists(output_folder_path):
+        #     os.makedirs(output_folder_path)
+        #
+        # # n_cases = 2
+        # # metric_to_optimize = "MAP"
+
+        # parameterSearch.search(recommender_input_args,
+        #                        parameter_search_space=hyperparameters_range_dictionary,
+        #                        n_cases=n_cases,
+        #                        n_random_starts=1,
+        #                        save_model="no",
+        #                        output_folder_path=output_folder_path,
+        #                        output_file_name_root=recommender_class.RECOMMENDER_NAME,
+        #                        metric_to_optimize=metric_to_optimize
+        #                        )
+
     # Load best_parameters for training
     data_loader = DataIO(folder_path=output_folder_path)
     search_metadata = data_loader.load_data(output_file_name_root)
@@ -154,7 +294,7 @@ def hyperparams_tuning(recommender_class):
 # Fit recommenders
 # -----------------
 
-def fit_recommender(recommender_class, URM, ICM=None):
+def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
 
     apply_hyperparams_tuning = False
 
@@ -169,8 +309,11 @@ def fit_recommender(recommender_class, URM, ICM=None):
     elif recommender_class in content_algorithm_list or \
             recommender_class in collaborative_algorithm_list:
 
-        if recommender_class in content_algorithm_list:
-            recommender = recommender_class(URM, ICM)  # todo: ICM_all or ICM_train?
+        if recommender_class is ItemKNNCBFRecommender:
+            recommender = recommender_class(URM, ICM_train=ICM)  # todo: ICM_all or ICM_train?
+
+        elif recommender_class is UserKNNCBFRecommender:
+            recommender = recommender_class(URM, UCM_train=UCM)
 
         elif recommender_class in collaborative_algorithm_list:
             recommender = recommender_class(URM)
@@ -317,106 +460,12 @@ def fit_recommender(recommender_class, URM, ICM=None):
 
         pureSVD.fit(**best_parameters_pureSVD)
 
-
         # ItemKNNCF + pureSVD
         itemCF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
         best_parameters = {'alpha': 0.6}
         itemCF_scores_hybrid.fit(**best_parameters)
 
     return recommender
-
-
-# Build URM, ICM and UCM
-# ----------------------
-
-URM_all = build_URM()
-ICM_all = build_ICM()
-UCM_all = build_UCM(URM_all)
-# get_statistics_URM(URM_all)
-
-
-cutoff = 10  # k recommended_items
-
-# URM train/validation/test splitting
-# -----------------------------------
-k_out = 1
-
-# URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
-# URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
-
-URM_train, URM_test = split_train_leave_k_out_user_wise(URM_all,
-                                                        k_out=k_out,
-                                                        use_validation_set=False,
-                                                        leave_random_out=True)
-
-URM_train, URM_validation = split_train_leave_k_out_user_wise(URM_train,
-                                                              k_out=k_out,
-                                                              use_validation_set=False,
-                                                              leave_random_out=True)
-
-
-
-# Non-personalized recommenders
-non_personalized_list = [
-    RandomRecommender,
-    TopPopRecommender
-]
-
-# Collaborative recommenders
-collaborative_algorithm_list = [
-    ItemKNNCFRecommender,
-    UserKNNCFRecommender,
-    #     MatrixFactorization_BPR_Cython,
-    # MatrixFactorization_FunkSVD_Cython,
-    PureSVDRecommender,
-    # SLIM_BPR_Cython,
-    # SLIMElasticNetRecommender,
-
-    # Graph-based
-    P3alphaRecommender,
-    RP3betaRecommender,
-]
-
-# Content-based recommenders
-content_algorithm_list = [
-    ItemKNNCBFRecommender,
-    UserKNNCBFRecommender
-]
-
-# Hybrid recommenders
-hybrid_algorithm_list = [
-    ItemKNNSimilarityHybridRecommender,  # Linear combination of item-based models
-    CFW_D_Similarity_Linalg,  # regression problem using linalg solver
-    ItemKNNScoresHybridRecommender  # Linear combination of predictions
-]
-
-recommender_list = [
-    # Non-personalized
-    RandomRecommender,
-    TopPopRecommender,
-
-    # Graph-based recommenders
-    P3alphaRecommender,
-    RP3betaRecommender,
-
-    # Collaborative recommenders
-    ItemKNNCFRecommender,
-    UserKNNCFRecommender,
-
-    #     MatrixFactorization_BPR_Cython,
-    # MatrixFactorization_FunkSVD_Cython,
-    PureSVDRecommender,
-    # SLIM_BPR_Cython,
-    # SLIMElasticNetRecommender,
-
-    # Content-based recommenders
-    ItemKNNCBFRecommender,
-
-    # Hybrid recommenders
-    ItemKNNSimilarityHybridRecommender,
-    CFW_D_Similarity_Linalg,
-    ItemKNNScoresHybridRecommender
-]
 
 
 # Best hyperparameters found by tuning
@@ -444,8 +493,11 @@ best_parameters_list = {
 
     # Content-based recommenders
 
-    'ItemKNNCBFRecommender': {'topK': 972, 'shrink': 993, 'similarity': 'cosine', 'normalize': False,
-                              'feature_weighting': 'BM25'},
+    'ItemKNNCBFRecommender': {'topK': 100, 'shrink': 200, 'similarity': 'cosine', 'normalize': True,
+                              'feature_weighting': 'none'},
+
+    'UserKNNCBFRecommender': {'topK': 100, 'shrink': 200, 'similarity': 'cosine', 'normalize': True,
+                              'feature_weighting': 'none'},
 
 }
 
@@ -466,8 +518,11 @@ def recommendations_quality_by_group():
     # ItemCF
     itemKNNCF = fit_recommender(ItemKNNCFRecommender, URM_train)
 
+    # UserCBF
+    userKNNCBF = fit_recommender(UserKNNCBFRecommender, URM_train, UCM=UCM_all)
+
     # ItemCBF
-    itemKNNCBF = fit_recommender(ItemKNNCBFRecommender, URM_train, ICM_all)
+    itemKNNCBF = fit_recommender(ItemKNNCBFRecommender, URM_train, ICM=ICM_all)
 
     # P3alpha
     P3alpha = fit_recommender(P3alphaRecommender, URM_train)
@@ -477,7 +532,6 @@ def recommendations_quality_by_group():
 
     # PureSVD
     pureSVD = fit_recommender(PureSVDRecommender, URM_train)
-
 
     # Similarity Hybrid: linear combination of item-based models
     # ----------------------------------------------------------
@@ -508,7 +562,6 @@ def recommendations_quality_by_group():
     best_parameters = {'alpha': 0.6}
     itemCF_alpha_beta_similarity_hybrid.fit(**best_parameters)
 
-
     # Score Hybrid: linear combination of heterogeneous models (combination of predictions)
     # --------------------------------------------------------------------------------------
 
@@ -516,7 +569,6 @@ def recommendations_quality_by_group():
     itemCF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
     best_parameters = {'alpha': 0.6}
     itemCF_scores_hybrid.fit(**best_parameters)
-
 
     # User-wise discrimination
     # --------------------------
@@ -528,14 +580,15 @@ def recommendations_quality_by_group():
     sorted_users = np.argsort(profile_length)
 
     MAP_topPop_per_group = []
-    MAP_itemKNNCF_per_group = [] #
-    MAP_itemKNNCBF_per_group = [] #
+    MAP_itemKNNCF_per_group = []  #
+    MAP_itemKNNCBF_per_group = []  #
+    MAP_userKNNCBF_per_group = []  #
     MAP_itemCBF_similarity_hybrid_per_group = []
     MAP_itemCF_alpha_similarity_hybrid_per_group = []
     MAP_itemCF_beta_similarity_hybrid_per_group = []
     MAP_itemCF_alpha_beta_similarity_hybrid_per_group = []
     MAP_alpha_beta_similarity_hybrid_per_group = []
-    MAP_itemCF_scores_hybrid_per_group = [] #
+    MAP_itemCF_scores_hybrid_per_group = []  #
 
     for group_id in range(0, num_groups):
         start_pos = group_id * block_size
@@ -562,42 +615,46 @@ def recommendations_quality_by_group():
         MAP_topPop_per_group.append(results[cutoff]["MAP"])
 
         results, _ = evaluator_test.evaluateRecommender(itemKNNCF)
-        MAP_itemKNNCF_per_group.append(results[cutoff]["MAP"]) #
+        MAP_itemKNNCF_per_group.append(results[cutoff]["MAP"])  #
 
         results, _ = evaluator_test.evaluateRecommender(itemKNNCBF)
-        MAP_itemKNNCBF_per_group.append(results[cutoff]["MAP"]) #
+        MAP_itemKNNCBF_per_group.append(results[cutoff]["MAP"])  #
 
-        results, _ = evaluator_test.evaluateRecommender(itemCBF_similarity_hybrid)
-        MAP_itemCBF_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+        results, _ = evaluator_test.evaluateRecommender(userKNNCBF)
+        MAP_userKNNCBF_per_group.append(results[cutoff]["MAP"])  #
 
-        results, _ = evaluator_test.evaluateRecommender(itemCF_alpha_similarity_hybrid)
-        MAP_itemCF_alpha_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
-
-        results, _ = evaluator_test.evaluateRecommender(itemCF_beta_similarity_hybrid)
-        MAP_itemCF_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
-
-        results, _ = evaluator_test.evaluateRecommender(itemCF_alpha_beta_similarity_hybrid)
-        MAP_itemCF_alpha_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
-
-        results, _ = evaluator_test.evaluateRecommender(alpha_beta_similarity_hybrid)
-        MAP_alpha_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
-
-        results, _ = evaluator_test.evaluateRecommender(itemCF_scores_hybrid)
-        MAP_itemCF_scores_hybrid_per_group.append(results[cutoff]["MAP"]) #
+        # results, _ = evaluator_test.evaluateRecommender(itemCBF_similarity_hybrid)
+        # MAP_itemCBF_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+        #
+        # results, _ = evaluator_test.evaluateRecommender(itemCF_alpha_similarity_hybrid)
+        # MAP_itemCF_alpha_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+        #
+        # results, _ = evaluator_test.evaluateRecommender(itemCF_beta_similarity_hybrid)
+        # MAP_itemCF_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+        #
+        # results, _ = evaluator_test.evaluateRecommender(itemCF_alpha_beta_similarity_hybrid)
+        # MAP_itemCF_alpha_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+        #
+        # results, _ = evaluator_test.evaluateRecommender(alpha_beta_similarity_hybrid)
+        # MAP_alpha_beta_similarity_hybrid_per_group.append(results[cutoff]["MAP"])
+        #
+        # results, _ = evaluator_test.evaluateRecommender(itemCF_scores_hybrid)
+        # MAP_itemCF_scores_hybrid_per_group.append(results[cutoff]["MAP"])  #
 
     print("plotting.....")
 
     import matplotlib.pyplot as pyplot
 
     pyplot.plot(MAP_topPop_per_group, label="topPop")
-    pyplot.plot(MAP_itemKNNCF_per_group, label="itemKNNCF") #
-    pyplot.plot(MAP_itemKNNCBF_per_group, label="itemKNNCBF") #
-    pyplot.plot(MAP_itemCBF_similarity_hybrid_per_group, label="ItemKNNCF + ItemKNNCBF")
-    pyplot.plot(MAP_itemCF_scores_hybrid_per_group, label="ItemKNNCF + pureSVD") #
-    pyplot.plot(MAP_itemCF_alpha_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha")
-    pyplot.plot(MAP_itemCF_beta_similarity_hybrid_per_group, label="ItemKNNCF + RP3beta")
-    pyplot.plot(MAP_itemCF_alpha_beta_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha + RP3beta")
-    pyplot.plot(MAP_alpha_beta_similarity_hybrid_per_group, label="P3alpha + RP3beta")
+    pyplot.plot(MAP_itemKNNCF_per_group, label="itemKNNCF")  #
+    pyplot.plot(MAP_itemKNNCBF_per_group, label="itemKNNCBF")  #
+    pyplot.plot(MAP_userKNNCBF_per_group, label="userKNNCBF")  #
+    # pyplot.plot(MAP_itemCBF_similarity_hybrid_per_group, label="ItemKNNCF + ItemKNNCBF")
+    # pyplot.plot(MAP_itemCF_scores_hybrid_per_group, label="ItemKNNCF + pureSVD")  #
+    # pyplot.plot(MAP_itemCF_alpha_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha")
+    # pyplot.plot(MAP_itemCF_beta_similarity_hybrid_per_group, label="ItemKNNCF + RP3beta")
+    # pyplot.plot(MAP_itemCF_alpha_beta_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha + RP3beta")
+    # pyplot.plot(MAP_alpha_beta_similarity_hybrid_per_group, label="P3alpha + RP3beta")
     pyplot.ylabel('MAP')
     pyplot.xlabel('User Group')
     pyplot.legend()
@@ -607,10 +664,10 @@ def recommendations_quality_by_group():
 # recommendations_quality_by_group()
 # exit(0)
 
+
 ################################################################################################################
 
 def recommendations_with_fallback():
-
     # Train models on the whole dataset
     # ---------------------------------
 
@@ -637,7 +694,6 @@ def recommendations_with_fallback():
     num_groups = int(np.ceil(n_users / block_size))
     sorted_users = np.argsort(profile_length)
 
-
     users_by_group = []
 
     for group_id in range(0, num_groups):
@@ -657,7 +713,6 @@ def recommendations_with_fallback():
         # Users by group
         users_by_group.append(users_in_group)
 
-
     # Generate predictions
     user_id_array = get_target_users()
     items = []
@@ -676,20 +731,19 @@ def recommendations_with_fallback():
         else:
             # print("user_id: {}, group: 2, 3, 4, itemCF_alpha_similarity_hybrid".format(user_id))
             item_list = itemCF_alpha_similarity_hybrid.recommend(user_id,
-                                                        cutoff=cutoff,
-                                                        remove_seen_flag=True,
-                                                        remove_top_pop_flag=True)
+                                                                 cutoff=cutoff,
+                                                                 remove_seen_flag=True,
+                                                                 remove_top_pop_flag=True)
 
         items.append(np.array(item_list))
         print("user_id: ", user_id)
-
 
     # save predictions on csv file
     create_csv(user_id_array, items, None)
 
 
-recommendations_with_fallback()
-exit(0)
+# recommendations_with_fallback()
+# exit(0)
 
 
 ################################################################################################################
@@ -697,7 +751,6 @@ exit(0)
 
 # Recommenders
 # ------------
-
 
 print('\nRecommender Systems: ')
 for i, recomm_type in enumerate(recommender_list, start=1):
@@ -709,7 +762,7 @@ while True:
         recommender_class = recommender_list[selected - 1]
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
-        recommender = fit_recommender(recommender_class, URM_train, ICM_all)
+        recommender = fit_recommender(recommender_class, URM_train, ICM_all, UCM_all)
 
         # Evaluate model
         # --------------

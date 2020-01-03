@@ -44,6 +44,7 @@ from recommenders.PureSVDRecommender import PureSVDRecommender
 ##########                                                  ##########
 ######################################################################
 from recommenders.KNN.ItemKNNCBFRecommender import ItemKNNCBFRecommender
+from recommenders.KNN.UserKNNCBFRecommender import UserKNNCBFRecommender
 
 
 ######################################################################
