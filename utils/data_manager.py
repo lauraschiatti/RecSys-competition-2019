@@ -206,7 +206,7 @@ def build_ICM():
 
     ICM_asset = csr_sparse_matrix(asset_list_icm, item_list_icm, col_list_icm)
 
-    ICM_all = sps.hstack([ICM_price, ICM_asset, ICM_subclass], format='csr')
+    ICM_all = sps.hstack([ICM_price, ICM_asset], format='csr')
 
     # item_feature_ratios(ICM_all)
 

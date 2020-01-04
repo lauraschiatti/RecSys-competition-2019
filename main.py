@@ -237,7 +237,6 @@ def hyperparams_tuning(recommender_class):
             print("On recommender {} Exception {}".format(recommender_class, str(e)))
             traceback.print_exc()
 
-
         # from utils.ParameterTuning.SearchBayesianSkopt import SearchBayesianSkopt
         # from utils.ParameterTuning.SearchAbstractClass import SearchInputRecommenderArgs
         # from skopt.space import Real, Integer, Categorical
@@ -460,10 +459,30 @@ def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
 
         pureSVD.fit(**best_parameters_pureSVD)
 
+        # itemKNNCBF
+        itemKNNCBF = ItemKNNCBFRecommender(URM, ICM)
+
+        if apply_hyperparams_tuning:
+            best_parameters_itemKNNCBF = hyperparams_tuning(ItemKNNCBFRecommender)
+        else:
+            best_parameters_itemKNNCBF = best_parameters_list["ItemKNNCBFRecommender"]
+
+        itemKNNCBF.fit(**best_parameters_itemKNNCBF)
+
+        topPop = TopPopRecommender(URM)
+        topPop.fit()
+
         # ItemKNNCF + pureSVD
         itemCF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
         best_parameters = {'alpha': 0.6}
         itemCF_scores_hybrid.fit(**best_parameters)
+
+        # TopPop + ItemKNNCBF
+        TopPop_itemCBF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, topPop , itemKNNCBF)
+        best_parameters = {'alpha': 0.4}
+        TopPop_itemCBF_scores_hybrid.fit(**best_parameters)
+
+        recommender = TopPop_itemCBF_scores_hybrid
 
     return recommender
 
@@ -569,6 +588,11 @@ def recommendations_quality_by_group():
     itemCF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, itemKNNCF, pureSVD)
     best_parameters = {'alpha': 0.6}
     itemCF_scores_hybrid.fit(**best_parameters)
+
+    # TopPop + ItemKNNCBF
+    TopPop_ItemCBF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, topPop, itemKNNCBF)
+    best_parameters = {'alpha': 0.8}
+    TopPop_ItemCBF_scores_hybrid.fit(**best_parameters)
 
     # User-wise discrimination
     # --------------------------
