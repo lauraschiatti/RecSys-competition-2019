@@ -6,7 +6,7 @@ import os
 import numpy as np
 from utils.data_manager import build_URM, build_ICM, build_UCM, get_statistics_URM, get_target_users
 from utils.Evaluation.Evaluator import EvaluatorHoldout
-from utils.ParameterTuning.hyperparameter_search import runParameterSearch_Collaborative, runParameterSearch_Content
+from utils.ParameterTuning.hyperparameter_search import runParameterSearch_Collaborative, runParameterSearch_Content, runParameterSearch_CFW
 from utils.DataIO import DataIO
 from utils.create_submission_file import create_csv
 from utils.data_splitter import split_train_validation_random_holdout, split_train_leave_k_out_user_wise
@@ -206,6 +206,39 @@ def hyperparams_tuning(recommender_class):
 
 
     # Content-based
+    elif recommender_class is CFW_D_Similarity_Linalg:
+        ICM_object = ICM_all
+        ICM_name = "ICM_all"
+
+        itemKNNCF = ItemKNNCFRecommender(URM_all)
+
+        itemKNNCF.fit(**best_parameters_itemKNNCF)
+
+        W_sparse_CF = itemKNNCF.W_sparse
+
+        output_file_name_root = "{}_{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
+                                                               ICM_name, similarity_type)
+
+        try:
+            runParameterSearch_CFW(recommender_class=recommender_class,
+                                       URM_train=URM_train,
+                                       ICM_object=ICM_object,
+                                       ICM_name=ICM_name,
+                                       W_sparse_matrix=itemKNNCF.W_sparse,
+                                       n_cases=n_cases,
+                                       n_random_starts=n_random_starts,
+                                       save_model=save_model,
+                                       evaluator_validation=evaluator_validation,
+                                       evaluator_test=evaluator_test,
+                                       metric_to_optimize=metric_to_optimize,
+                                       output_folder_path=output_folder_path,
+                                       allow_weighting=allow_weighting,
+                                       similarity_type_list=similarity_type_list)
+
+        except Exception as e:
+            print("On recommender {} Exception {}".format(recommender_class, str(e)))
+            traceback.print_exc()
+
     elif recommender_class in [ItemKNNCBFRecommender, UserKNNCBFRecommender]:
         ICM_object = ICM_all
         ICM_name = "ICM_all"
@@ -216,7 +249,6 @@ def hyperparams_tuning(recommender_class):
 
         output_file_name_root = "{}_{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
                                                                ICM_name, similarity_type)
-
 
         try:
             runParameterSearch_Content(recommender_class=recommender_class,
@@ -788,8 +820,8 @@ def recommendations_with_fallback():
     create_csv(user_id_array, items, None)
 
 
-recommendations_with_fallback()
-exit(0)
+# recommendations_with_fallback()
+# exit(0)
 
 
 ################################################################################################################
@@ -809,12 +841,16 @@ while True:
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
         recommender = fit_recommender(recommender_class, URM_train, ICM_all, UCM_all)
+        itemKNNCF = ItemKNNCFRecommender(URM_train)
+        best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
+         'feature_weighting': 'none'}
+        itemKNNCF.fit(**best_parameters_itemKNNCF)
 
         # Evaluate model
         # --------------
 
         evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff])
-        result_dict, _ = evaluator_test.evaluateRecommender(recommender)
+        result_dict, _ = evaluator_test.evaluateRecommender(itemKNNCF)
 
         print("{} result_dict MAP {}".format(recommender.RECOMMENDER_NAME, result_dict[cutoff]["MAP"]))
 

@@ -524,8 +524,81 @@ def runParameterSearch_Collaborative(recommender_class, URM_train, URM_train_las
         error_file.write("On recommender {} Exception {}\n".format(recommender_class, str(e)))
         error_file.close()
 
+def runParameterSearch_CFW(recommender_class, URM_train, ICM_object, ICM_name, W_sparse_matrix, URM_train_last_test=None,
+                               n_cases=30, n_random_starts=5, resume_from_saved=False, save_model="best",
+                               evaluator_validation=None, evaluator_test=None, metric_to_optimize="PRECISION",
+                               output_folder_path="result_experiments/", parallelizeKNN=False, allow_weighting=True,
+                               similarity_type_list=None):
 
+    # If directory does not exist, create
+    if not os.path.exists(output_folder_path):
+        os.makedirs(output_folder_path)
 
+    URM_train = URM_train.copy()
+    ICM_object = ICM_object.copy()
+    W_sparse_matrix = W_sparse_matrix.copy()
+
+    if URM_train_last_test is not None:
+        URM_train_last_test = URM_train_last_test.copy()
+
+    ##########################################################################################################
+
+    try:
+        output_file_name_root = recommender_class.RECOMMENDER_NAME
+
+        parameterSearch = SearchBayesianSkopt(recommender_class,
+                                              evaluator_validation=evaluator_validation,
+                                              evaluator_test=evaluator_test)
+
+        hyperparameters_range_dictionary = {}
+        hyperparameters_range_dictionary["topK"] = Integer(5, 1000)
+        hyperparameters_range_dictionary["add_zeros_quota"] = Real(low=0, high=1, prior='uniform')
+        hyperparameters_range_dictionary["normalize_similarity"] = Categorical([True, False])
+
+        recommender_input_args = SearchInputRecommenderArgs(
+            CONSTRUCTOR_POSITIONAL_ARGS=[URM_train, ICM_object, W_sparse_matrix],
+            CONSTRUCTOR_KEYWORD_ARGS={},
+            FIT_POSITIONAL_ARGS=[],
+            FIT_KEYWORD_ARGS={}
+        )
+
+        if URM_train_last_test is not None:
+            recommender_input_args_last_test = recommender_input_args.copy()
+            recommender_input_args_last_test.CONSTRUCTOR_POSITIONAL_ARGS[0] = URM_train_last_test
+        else:
+            recommender_input_args_last_test = None
+
+        run_KNNCFWRecommender_on_similarity = parameterSearch.search(recommender_input_args,
+                       recommender_input_args_last_test = recommender_input_args_last_test,
+                       parameter_search_space = hyperparameters_range_dictionary,
+                       n_cases = n_cases,
+                       n_random_starts = int(n_cases/3),
+                       save_model = "no",
+                       output_folder_path = output_folder_path,
+                       output_file_name_root = recommender_class.RECOMMENDER_NAME,
+                       metric_to_optimize = metric_to_optimize
+                      )
+
+        # if parallelizeKNN:
+        #     pool = multiprocessing.Pool(processes=multiprocessing.cpu_count(), maxtasksperchild=1)
+        #     pool.map(run_KNNCFRecommender_on_similarity_type_partial, similarity_type_list)
+        #
+        #     pool.close()
+        #     pool.join()
+        #
+        # else:
+
+        for similarity_type in similarity_type_list:
+            run_KNNCFWRecommender_on_similarity(similarity_type)
+
+    except Exception as e:
+
+        print("On recommender {} Exception {}".format(recommender_class, str(e)))
+        traceback.print_exc()
+
+        error_file = open(output_folder_path + "ErrorLog.txt", "a")
+        error_file.write("On recommender {} Exception {}\n".format(recommender_class, str(e)))
+        error_file.close()
 
 """
 def read_data_split_and_search():
