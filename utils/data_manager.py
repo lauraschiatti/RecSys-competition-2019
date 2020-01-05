@@ -162,6 +162,8 @@ def build_ICM():
     ICM_shape = (num_items, 1)
     ICM_subclass = csr_sparse_matrix(class_list_icm, item_list_icm, col_list_icm, shape=ICM_shape)
 
+    ################################################################################################################
+
     # Load price data
     matrix_tuples = []
     n_prices = 0
@@ -184,6 +186,8 @@ def build_ICM():
 
     ICM_price = csr_sparse_matrix(price_list_icm, item_list_icm, col_list_icm)
 
+    ################################################################################################################
+
     # Load asset data
     matrix_tuples = []
     n_assets = 0
@@ -205,6 +209,8 @@ def build_ICM():
     asset_list_icm = list(asset_list)
 
     ICM_asset = csr_sparse_matrix(asset_list_icm, item_list_icm, col_list_icm)
+
+    ################################################################################################################
 
     ICM_all = sps.hstack([ICM_price, ICM_asset], format='csr')
 

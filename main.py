@@ -448,6 +448,8 @@ def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
 
         itemKNNCF.fit(**best_parameters_itemKNNCF)
 
+        ##########################################################################################
+
         pureSVD = PureSVDRecommender(URM)
 
         if apply_hyperparams_tuning:
@@ -455,11 +457,10 @@ def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
         else:
             best_parameters_pureSVD = best_parameters_list["PureSVDRecommender"]
 
-            # best_parameters_pureSVD = {'num_factors': 50}
-
         pureSVD.fit(**best_parameters_pureSVD)
 
-        # itemKNNCBF
+        ##########################################################################################
+
         itemKNNCBF = ItemKNNCBFRecommender(URM, ICM)
 
         if apply_hyperparams_tuning:
@@ -469,6 +470,8 @@ def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
 
         itemKNNCBF.fit(**best_parameters_itemKNNCBF)
 
+        ##########################################################################################
+
         topPop = TopPopRecommender(URM)
         topPop.fit()
 
@@ -477,12 +480,17 @@ def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
         best_parameters = {'alpha': 0.6}
         itemCF_scores_hybrid.fit(**best_parameters)
 
-        # TopPop + ItemKNNCBF
-        TopPop_itemCBF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, topPop , itemKNNCBF)
-        best_parameters = {'alpha': 0.4}
-        TopPop_itemCBF_scores_hybrid.fit(**best_parameters)
+        ##########################################################################################
 
-        recommender = TopPop_itemCBF_scores_hybrid
+        # TopPop + ItemKNNCBF
+        topPop_itemCBF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, topPop , itemKNNCBF)
+        best_parameters = {'alpha': 0.4}
+        topPop_itemCBF_scores_hybrid.fit(**best_parameters)
+
+        ##########################################################################################
+
+        # recommender to retrieve
+        recommender = topPop_itemCBF_scores_hybrid
 
     return recommender
 
@@ -532,7 +540,7 @@ best_parameters_list = {
 
 def recommendations_quality_by_group():
     # TopPop
-    topPop = fit_recommender(TopPopRecommender, URM_train, ICM_all)
+    topPop = fit_recommender(TopPopRecommender, URM_train)
 
     # ItemCF
     itemKNNCF = fit_recommender(ItemKNNCFRecommender, URM_train)
@@ -590,9 +598,9 @@ def recommendations_quality_by_group():
     itemCF_scores_hybrid.fit(**best_parameters)
 
     # TopPop + ItemKNNCBF
-    TopPop_ItemCBF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, topPop, itemKNNCBF)
-    best_parameters = {'alpha': 0.8}
-    TopPop_ItemCBF_scores_hybrid.fit(**best_parameters)
+    topPop_ItemCBF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, topPop, itemKNNCBF)
+    best_parameters = {'alpha': 0.6}
+    topPop_ItemCBF_scores_hybrid.fit(**best_parameters)
 
     # User-wise discrimination
     # --------------------------
@@ -613,6 +621,7 @@ def recommendations_quality_by_group():
     MAP_itemCF_alpha_beta_similarity_hybrid_per_group = []
     MAP_alpha_beta_similarity_hybrid_per_group = []
     MAP_itemCF_scores_hybrid_per_group = []  #
+    MAP_TopPop_ItemCBF_scores_hybrid_per_group = []  #
 
     for group_id in range(0, num_groups):
         start_pos = group_id * block_size
@@ -665,6 +674,9 @@ def recommendations_quality_by_group():
         # results, _ = evaluator_test.evaluateRecommender(itemCF_scores_hybrid)
         # MAP_itemCF_scores_hybrid_per_group.append(results[cutoff]["MAP"])  #
 
+        results, _ = evaluator_test.evaluateRecommender(TopPop_ItemCBF_scores_hybrid)
+        MAP_TopPop_ItemCBF_scores_hybrid_per_group.append(results[cutoff]["MAP"])  #
+
     print("plotting.....")
 
     import matplotlib.pyplot as pyplot
@@ -679,6 +691,8 @@ def recommendations_quality_by_group():
     # pyplot.plot(MAP_itemCF_beta_similarity_hybrid_per_group, label="ItemKNNCF + RP3beta")
     # pyplot.plot(MAP_itemCF_alpha_beta_similarity_hybrid_per_group, label="ItemKNNCF + P3alpha + RP3beta")
     # pyplot.plot(MAP_alpha_beta_similarity_hybrid_per_group, label="P3alpha + RP3beta")
+    # pyplot.plot(MAP_itemCF_scores_hybrid_per_group, label="ItemKNNCF + pureSVD")
+    pyplot.plot(MAP_TopPop_ItemCBF_scores_hybrid_per_group, label="TopPop + ItemKNNCBF")
     pyplot.ylabel('MAP')
     pyplot.xlabel('User Group')
     pyplot.legend()
@@ -698,6 +712,9 @@ def recommendations_with_fallback():
     # TopPop
     topPop = fit_recommender(TopPopRecommender, URM_all)
 
+    # ItemCBF
+    itemKNNCBF = fit_recommender(ItemKNNCBFRecommender, URM_train, ICM=ICM_all)
+
     # ItemCF
     itemKNNCF = fit_recommender(ItemKNNCFRecommender, URM_all)
 
@@ -708,6 +725,11 @@ def recommendations_with_fallback():
     itemCF_alpha_similarity_hybrid = ItemKNNSimilarityHybridRecommender(URM_all, itemKNNCF.W_sparse, P3alpha.W_sparse)
     best_parameters = {'alpha': 0.6}
     itemCF_alpha_similarity_hybrid.fit(**best_parameters)
+
+    # TopPop + ItemKNNCBF
+    topPop_ItemCBF_scores_hybrid = ItemKNNScoresHybridRecommender(URM_train, topPop, itemKNNCBF)
+    best_parameters = {'alpha': 0.6}
+    topPop_ItemCBF_scores_hybrid.fit(**best_parameters)
 
     # User-wise discrimination
     # --------------------------
@@ -748,7 +770,7 @@ def recommendations_with_fallback():
         if user_id in users_by_group[0] or \
                 user_id in users_by_group[1]:
             # print("user_id: {}, group: 0 or 1, topPop".format(user_id))
-            item_list = topPop.recommend(user_id,
+            item_list = topPop_ItemCBF_scores_hybrid.recommend(user_id,
                                          cutoff=cutoff,
                                          remove_seen_flag=False,
                                          remove_top_pop_flag=False)
@@ -766,8 +788,8 @@ def recommendations_with_fallback():
     create_csv(user_id_array, items, None)
 
 
-# recommendations_with_fallback()
-# exit(0)
+recommendations_with_fallback()
+exit(0)
 
 
 ################################################################################################################
