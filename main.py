@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 
+# def warn(*args, **kwargs):
+#     pass
+# import warnings
+# warnings.warn = warn
+
 import traceback
 import os
 import numpy as np
@@ -33,6 +38,7 @@ from recommenders.GraphBased.RP3betaRecommender import RP3betaRecommender
 
 # KNN machine learning
 # from SLIM_BPR.Cython.SLIM_BPR_Cython import SLIM_BPR_Cython
+from recommenders.SLIMElasticNetRecommender import MultiThreadSLIM_ElasticNet
 # from SLIM_ElasticNet.SLIMElasticNetRecommender import SLIMElasticNetRecommender
 
 # Matrix Factorization
@@ -121,6 +127,11 @@ hybrid_algorithm_list = [
     ItemKNNScoresHybridRecommender  # Linear combination of predictions
 ]
 
+# ML recommenders
+ml_algorithm_list = [
+    MultiThreadSLIM_ElasticNet
+]
+
 recommender_list = [
     # Non-personalized
     RandomRecommender,
@@ -147,7 +158,10 @@ recommender_list = [
     # Hybrid recommenders
     ItemKNNSimilarityHybridRecommender,
     CFW_D_Similarity_Linalg,
-    ItemKNNScoresHybridRecommender
+    ItemKNNScoresHybridRecommender,
+
+    # ML algorithms
+    MultiThreadSLIM_ElasticNet
 ]
 
 
@@ -524,6 +538,14 @@ def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
         # recommender to retrieve
         recommender = topPop_itemCBF_scores_hybrid
 
+        # Score Hybrid: linear combination of heterogeneous models (combination of predictions)
+        # --------------------------------------------------------------------------------------
+    elif recommender_class is MultiThreadSLIM_ElasticNet:
+
+        recommender = MultiThreadSLIM_ElasticNet(URM_train)
+
+        recommender.fit()
+
     return recommender
 
 
@@ -841,16 +863,12 @@ while True:
         print('\n ... {} ... '.format(recommender_class.RECOMMENDER_NAME))
 
         recommender = fit_recommender(recommender_class, URM_train, ICM_all, UCM_all)
-        itemKNNCF = ItemKNNCFRecommender(URM_train)
-        best_parameters_itemKNNCF = {'topK': 9, 'shrink': 47, 'similarity': 'cosine', 'normalize': True,
-         'feature_weighting': 'none'}
-        itemKNNCF.fit(**best_parameters_itemKNNCF)
 
         # Evaluate model
         # --------------
 
         evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff])
-        result_dict, _ = evaluator_test.evaluateRecommender(itemKNNCF)
+        result_dict, _ = evaluator_test.evaluateRecommender(recommender)
 
         print("{} result_dict MAP {}".format(recommender.RECOMMENDER_NAME, result_dict[cutoff]["MAP"]))
 

@@ -86,6 +86,8 @@ class BaseRecommender(object):
 
     def _remove_seen_on_scores(self, user_id, scores):
 
+        self.URM_train = check_matrix(self.URM_train.copy(), 'csr', dtype=np.float32)
+
         assert self.URM_train.getformat() == "csr", "Recommender_Base_Class: URM_train is not CSR, this will cause errors in filtering seen items"
 
         seen = self.URM_train.indices[self.URM_train.indptr[user_id]:self.URM_train.indptr[user_id + 1]]
