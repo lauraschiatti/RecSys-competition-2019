@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 
-# def warn(*args, **kwargs):
-#     pass
-# import warnings
-# warnings.warn = warn
+def warn(*args, **kwargs):
+    pass
+import warnings
+warnings.warn = warn
 
 import traceback
 import os
@@ -38,7 +38,7 @@ from recommenders.GraphBased.RP3betaRecommender import RP3betaRecommender
 
 # KNN machine learning
 # from SLIM_BPR.Cython.SLIM_BPR_Cython import SLIM_BPR_Cython
-from recommenders.SLIMElasticNetRecommender import MultiThreadSLIM_ElasticNet
+from recommenders.SLIMElasticNetRecommender import SLIMElasticNetRecommender
 # from SLIM_ElasticNet.SLIMElasticNetRecommender import SLIMElasticNetRecommender
 
 # Matrix Factorization
@@ -78,7 +78,7 @@ cutoff = 10  # k recommended_items
 
 # URM train/validation/test splitting
 # -----------------------------------
-k_out = 1
+k_out = 4
 
 # URM_train, URM_test = split_train_validation_random_holdout(URM_all, train_split=0.8)
 # URM_train, URM_validation = split_train_validation_random_holdout(URM_train, train_split=0.9)
@@ -129,7 +129,7 @@ hybrid_algorithm_list = [
 
 # ML recommenders
 ml_algorithm_list = [
-    MultiThreadSLIM_ElasticNet
+    SLIMElasticNetRecommender
 ]
 
 recommender_list = [
@@ -161,7 +161,7 @@ recommender_list = [
     ItemKNNScoresHybridRecommender,
 
     # ML algorithms
-    MultiThreadSLIM_ElasticNet
+    SLIMElasticNetRecommender
 ]
 
 
@@ -172,7 +172,8 @@ def hyperparams_tuning(recommender_class):
     metric_to_optimize = "MAP"
 
     evaluator_validation = EvaluatorHoldout(URM_validation, cutoff_list=[cutoff])
-    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff, cutoff + 5])
+    # evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff, cutoff + 5])
+    evaluator_test = EvaluatorHoldout(URM_test, cutoff_list=[cutoff])
     evaluator_validation_earlystopping = EvaluatorHoldout(URM_train, cutoff_list=[cutoff], exclude_seen=False)
 
     output_folder_path = "result_experiments/"
@@ -194,7 +195,7 @@ def hyperparams_tuning(recommender_class):
 
     # Non-personalized and Collaborative
     if recommender_class in [RandomRecommender, TopPopRecommender, ItemKNNCFRecommender, UserKNNCFRecommender,
-                             PureSVDRecommender, P3alphaRecommender, RP3betaRecommender]:
+                             PureSVDRecommender, P3alphaRecommender, RP3betaRecommender, SLIMElasticNetRecommender]:
 
         if recommender_class in [ItemKNNCFRecommender, UserKNNCFRecommender]:
             output_file_name_root = "{}_{}_metadata.zip".format(recommender_class.RECOMMENDER_NAME,
@@ -283,6 +284,28 @@ def hyperparams_tuning(recommender_class):
             print("On recommender {} Exception {}".format(recommender_class, str(e)))
             traceback.print_exc()
 
+    elif recommender_class.RECOMMENDER_NAME == 'SLIMElasticNetRecommender':
+
+        try:
+            runParameterSearch_Collaborative(recommender_class=recommender_class,
+                                             URM_train=URM_train,
+                                             metric_to_optimize=metric_to_optimize,
+                                             evaluator_validation=evaluator_validation,
+                                             evaluator_test=evaluator_test,
+                                             evaluator_validation_earlystopping=evaluator_validation_earlystopping,
+                                             output_folder_path=output_folder_path,
+                                             n_cases=n_cases,
+                                             n_random_starts=n_random_starts,
+                                             save_model=save_model,
+                                             allow_weighting=allow_weighting,
+                                             similarity_type_list=similarity_type_list)
+
+        except Exception as e:
+            print("On recommender {} Exception {}".format(recommender_class, str(e)))
+            traceback.print_exc()
+
+
+
         # from utils.ParameterTuning.SearchBayesianSkopt import SearchBayesianSkopt
         # from utils.ParameterTuning.SearchAbstractClass import SearchInputRecommenderArgs
         # from skopt.space import Real, Integer, Categorical
@@ -336,12 +359,13 @@ def hyperparams_tuning(recommender_class):
     return best_parameters
 
 
+
 # Fit recommenders
 # -----------------
 
 def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
 
-    apply_hyperparams_tuning = False
+    apply_hyperparams_tuning = True
 
     # Non-personalized
     # ----------------
@@ -540,11 +564,18 @@ def fit_recommender(recommender_class, URM, ICM=None, UCM=None):
 
         # Score Hybrid: linear combination of heterogeneous models (combination of predictions)
         # --------------------------------------------------------------------------------------
-    elif recommender_class is MultiThreadSLIM_ElasticNet:
+    elif recommender_class is SLIMElasticNetRecommender:
 
-        recommender = MultiThreadSLIM_ElasticNet(URM_train)
+        SLIMElasticNet = SLIMElasticNetRecommender(URM_train)
 
-        recommender.fit()
+        if apply_hyperparams_tuning:
+            best_parameters_SLIMElasticNet = hyperparams_tuning(SLIMElasticNetRecommender)
+        else:
+            best_parameters_SLIMElasticNet = best_parameters_list["SLIMElasticNetRecommender"]
+
+        SLIMElasticNet.fit(**best_parameters_SLIMElasticNet)
+
+        recommender = SLIMElasticNet
 
     return recommender
 
