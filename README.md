@@ -1,4 +1,4 @@
-# RecSys_competition_2019
+# Recommender Systems Competition 2019
 
 Recommender Systems 2019 @ MSc. Computer Science &amp; Engineering - Politecnico di Milano.
 
