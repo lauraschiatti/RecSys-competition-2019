@@ -2,7 +2,7 @@
 
 Recommender Systems 2019 @ MSc. Computer Science &amp; Engineering - Politecnico di Milano.
 
-Competition availabe on https://www.kaggle.com/c/recommender-system-2019-challenge-polimi/overview
+Competition available on https://www.kaggle.com/c/recommender-system-2019-challenge-polimi/overview
 
 ## Purpose
 
